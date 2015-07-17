@@ -131,7 +131,7 @@ public class NodeMotif {
     }
 
     /**
-     * 
+     *
      * @param n
      */
     public void thinFreq(int n) {
