@@ -1,30 +1,32 @@
 package analysis;
 
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.FileReader;
-import java.io.FileWriter;
-import java.io.IOException;
+import com.google.common.collect.Sets;
+import data.NodeMotif;
+import util.MathUtil;
+
+import javax.swing.plaf.synth.SynthOptionPaneUI;
+import java.io.*;
+import java.net.SocketPermission;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.Random;
-import java.util.Set;
-
-import com.google.common.collect.Sets;
-import util.MathUtil;
-import data.NodeMotif;
+import java.util.*;
 
 /**
- * Count Motifs for each week
+ * Count Motifs week by week
+ *
+ * Basic flow:
+ *  1. Read MM for one period, add long ID into a integer dictionary [dict], initialize those ID in [allMotif]
+ *  2. Read phone data for this period and one period before, expand [dict] and [allMotif], fill in -lists in [allMotif]
+ *  3. Combine all degrees/frequencies of each node with ID in [allMotif] to several lists, calculate quantile threshold (for only IDs active in this period)
+ *  4. Remove IDs from [dict] and [allMotif] based on quantile threshold and hard threshold
+ *  5. Reset all -lists in [allMotif] to be empty
+ *  6. Read phone data again, fill in [allMotif] again, this time with only nodes in dictionary
+ *  7. count motifs
+ *  8. (optionally) sample integers in [dict] to a list, and output only motif counts in that list([sample])
+ *  9. swipe -list empty, and remove frequencies in [allMotif]
+ *  10. Repeat for next period
+ *
+ *  Note: outliers are checked for each period individually, as outlier IDs could be re-entered in dict
  *
  * Updated by zehangli 07/14/15
  */
@@ -50,10 +52,22 @@ public class NodeSampleWeek {
     // so MMstart = 070701
     //    PhoneEnd = 070707
     //	  MMend = 080101
-    public void streamMM(String file, int max, String MMstart, String PhoneEnd, String maxDate) throws IOException, ParseException {
+
+    /**
+     * Read Mobile money data
+     *
+     * @param file file name
+     * @param max maximum number of records read
+     * @param phoneStart  Start date in string; in weekly case, day 0
+     * @param PhoneEnd Middle date in string; in weekly case, day 7
+     * @param maxDate  End date in string; in weekly case, day 14
+     * @throws IOException
+     * @throws ParseException
+     */
+    public void streamMM(String file, int max, String phoneStart, String PhoneEnd, String maxDate) throws IOException, ParseException {
         int nextindex = this.allSize;
         // time starting reading Phone
-        double startTime = GlobalHelper.parseDate(MMstart);
+        double startTime = GlobalHelper.parseDate(phoneStart);
         // time starting checking MM sign-up
         double midTime = GlobalHelper.parseDate(PhoneEnd);
         // time stop reading data
@@ -63,18 +77,39 @@ public class NodeSampleWeek {
         String line;
         BufferedReader br = new BufferedReader(new FileReader(file));
 
-
+        // start reading file
         while ((line = br.readLine()) != null) {
+
+            // each lines look like: "L45485508|L10822145|080703|09:40:55|20|170|172"
+            // each block: 0-sender, 1-receiver, 3-date, 4-time, 5-amount, 6-senderTower, 7-receiverTower
+
             String[] field = line.split("\\|");
             if (field[4].charAt(0) != '-') {
-                time = parseTime(field);
-                // this is not correct, comment out.
-                //				if(time < startTime){continue;}
-                if (time > maxTime | nextindex > max) {
+
+                // parse time
+                time = GlobalHelper.parseTime(field);
+
+                // check if maximum time or number of records is reached
+                //       if time before starting time, still need to proceed
+                if (time >= maxTime | nextindex > max) {
                     break;
                 }
+
+                // parse sender into Long ID
                 String sender = field[0].replace("L", "0").replace("F", "1").replace("N", "2");
                 long s = Long.parseLong(sender);
+
+                // no need to parse receiver ID here, since only sending MM is considered here
+
+                /**
+                 * put sender information into dictionary
+                 * Y     : the outcome going into regression
+                 * label : MM user or not (currently the same as Y)
+                 *      sign up before startTime: Y = -1, label = 1
+                 *      sign up startTime to midTime: Y = -1, label = 1 (TODO: need to handle when started)
+                 *      sign up midTime to maxTime: Y = 1, label = 0
+                 *      sign up after maxTime: ignore (not reaching here)
+                 */
                 if (this.dict.get(s) == null) {
                     this.dict.put(s, nextindex);
                     if (time < startTime) {
@@ -88,20 +123,25 @@ public class NodeSampleWeek {
                 } else {
                     // if node already in the file, update label and y
                     int index = this.dict.get(s);
-                    // if before mid time point, it has to be y = -1
-                    if (time < midTime) {
+
+                    if (time < startTime) {
+                        this.allMotif.get(index).y = -1;
+                        this.allMotif.get(index).label = 1;
+
+                     } else if (time < midTime) {
+                        this.allMotif.get(index).y = -1;
+                        this.allMotif.get(index).label = 1;
+
+                       // extra case when streaming:
+                       // if this node signed up before this period, but no transfer sent in first week
+                     } else if (this.allMotif.get(index).y == 1 & this.allMotif.get(index).t < midTime){
                         this.allMotif.get(index).label = 1;
                         this.allMotif.get(index).y = -1;
-                        // otherwise, need to see if y = 1 already before.
-                        // if y = 1, might need to change to -1, since the prediction period is changed
-                    } else if (this.allMotif.get(index).y == 1 & this.allMotif.get(index).t < midTime) {
-                        this.allMotif.get(index).label = 1;
-                        this.allMotif.get(index).y = -1;
-                        // otherwise if y = 0, since time > mid time now, change y into 1
-                    } else if (this.allMotif.get(index).y == 0) {
+                     } else{
                         this.allMotif.get(index).label = 0;
                         this.allMotif.get(index).y = 1;
                     }
+
                 }
             }
         }
@@ -112,43 +152,64 @@ public class NodeSampleWeek {
         System.out.println("Last transaction time: " + time);
     }
 
-    // read phone file
-    public void streamPhone(String[] file, int max, String mmStart, String maxDate, int threa) throws ParseException, NumberFormatException, IOException {
 
-        double startTime = parseDate(mmStart);
-        double maxTime = parseDate(maxDate);
+    /***
+     * Read phone files
+     * 
+     * @param files array of file lists
+     * @param max maximum number of records (not used)
+     * @param mmStart time start counting MM
+     * @param maxDate maximum date to read
+     * @param thre threshold (not used) 
+     * @throws ParseException
+     * @throws NumberFormatException
+     * @throws IOException
+     */
+    public void streamPhone(String[] files, int max, String mmStart, String maxDate, int thre) throws ParseException, NumberFormatException, IOException {
+
+        // parse time
+        double startTime = GlobalHelper.parseDate(mmStart);
+        double maxTime = GlobalHelper.parseDate(maxDate);
         double time;
         double counter = Double.MIN_VALUE;
         String line;
         System.out.println("Read phone from " + mmStart + "to" + maxDate);
-        for (int i = 0; i < file.length; i++) {
-            BufferedReader br = new BufferedReader(new FileReader(file[i]));
+        
+        // loop through files until end of time period is reached
+        for (int i = 0; i < files.length; i++) {
+            BufferedReader br = new BufferedReader(new FileReader(files[i]));
+            // read line
             while ((line = br.readLine()) != null) {
                 String[] field = line.split("\\|");
                 if (field[4].charAt(0) != '-') {
-                    time = parseTime(field);
+                    time = GlobalHelper.parseTime(field);
                     if (time < startTime) {
                         continue;
                     }
-                    if (time > maxTime) {
+                    if (time >= maxTime) {
                         br.close();
                         return;
                     }
+                    
+                    // parse ID
                     String sender = field[0].replace("L", "0").replace("F", "1").replace("N", "2");
                     String receiver = field[1].replace("L", "0").replace("F", "1").replace("N", "2");
-
+                    // convert to Long ID
                     long s = Long.parseLong(sender);
                     long r = Long.parseLong(receiver);
 
-                    // since the data has been passed once for outlier check
+                    // since the data has been stored already in outlier check,
+                    // not in dictionary means they are outliers
                     if (this.dict.get(s) == null | this.dict.get(r) == null) {
                         continue;
                     }
+                    
                     // update neighborhood
                     int sid = this.dict.get(s);
                     int rid = this.dict.get(r);
                     this.allMotif.get(sid).sendto(rid);
                     this.allMotif.get(rid).recfrom(sid);
+                    
                     // print a dot for each new day
                     if (time - counter > 24) {
                         System.out.printf(".");
@@ -159,6 +220,7 @@ public class NodeSampleWeek {
             br.close();
         }
         return;
+
         //	comment out for now, not sure what is going on here...
         //			Iterator<Map.Entry<Long,Integer>> iter2 = this.dict.entrySet().iterator();
         //			int countremove = 0;
@@ -177,6 +239,11 @@ public class NodeSampleWeek {
         //			System.out.println("Number of nodes deleted again: " + countremove);
     }
 
+    /**
+     * Calculate min threshold of the frequencies under normal assumption
+     * @param raw ArrayList of call frequencies
+     * @return mean - sd * 3
+     */
     public double freqProcess(ArrayList<Integer> raw) {
 
         double mean = 0.0;
@@ -196,28 +263,43 @@ public class NodeSampleWeek {
     }
 
 
-    // thres: integer, how many one-directions calls consider as outlier (without the other direction)
-    // per: double, precentile to consider as outlier for indeg/outdeg/sum/ndeg
-    public void checkOutlier(String[] files, int max, String mmStart, String maxDate, int thres, double per, int hardThrea, boolean indep) throws ParseException, NumberFormatException, IOException {
+    /**
+     * Read file for first pass and delete outlier nodes from dictionary
+     *
+     * @param files array of file lists
+     * @param max maximum number of records (not used)
+     * @param phoneStart time start counting
+     * @param maxDate maximum date to read
+     * @param thre threshold for max one-directional communications
+     * @param per percentile to consider as outlier for indeg/outdeg/sum/ndeg
+     * @param hardThre integer, how many one-directions calls consider as outlier (without the other direction)
+     * @param indep Boolean, if true, don't count pairs if only one of them is in the dictionary (only count both in or both not)
+     * @throws ParseException
+     * @throws NumberFormatException
+     * @throws IOException
+     */
+    public void checkOutlier(String[] files, int max, String phoneStart, String maxDate, int thre, double per, int hardThre, boolean indep) throws ParseException, NumberFormatException, IOException {
         int nextindex = this.allSize;
         int beforeindex = nextindex;
-        double startTime = parseDate(mmStart);
-        double maxTime = parseDate(maxDate);
-        double time = 0.0;
-        double counter = Double.MIN_VALUE;
+        double startTime = GlobalHelper.parseDate(phoneStart);
+        double maxTime = GlobalHelper.parseDate(maxDate);
+        double time;
+        double counter = startTime;
         String line;
-        System.out.println("First-batch check outlier: phone from " + mmStart + "to" + maxDate);
+        System.out.println("First-batch check outlier: phone from " + phoneStart + "to" + maxDate);
+
         for (int i = 0; i < files.length; i++) {
             String file = files[i];
             BufferedReader br = new BufferedReader(new FileReader(file));
             while ((line = br.readLine()) != null) {
                 String[] field = line.split("\\|");
+
                 if (field[4].charAt(0) != '-') {
-                    time = parseTime(field);
+                    time = GlobalHelper.parseTime(field);
                     if (time < startTime) {
                         continue;
                     }
-                    if (time > maxTime | nextindex > max) {
+                    if (time >= maxTime | nextindex > max) {
                         break;
                     }
                     String sender = field[0].replace("L", "0").replace("F", "1").replace("N", "2");
@@ -225,10 +307,10 @@ public class NodeSampleWeek {
 
                     long s = Long.parseLong(sender);
                     long r = Long.parseLong(receiver);
-                /*
-				 * if independent, unless both are present or both are both not
-				 * otherwise ignore
-				 */
+                    /*
+                     * if independent, unless both are present or both are both not
+                     * otherwise ignore
+                     */
                     if (indep) {
                         if (this.dict.containsKey(s) != this.dict.containsKey(r)) {
                             continue;
@@ -278,6 +360,11 @@ public class NodeSampleWeek {
                 System.out.println("!");
                 continue;
             }
+            // since allMotif contains ID from previous periods, might have empty motifs
+            if(this.allMotif.get(node).inFreq + this.allMotif.get(node).outFreq == 0){
+                continue;
+            }
+
             indegs.add(this.allMotif.get(node).rList.size());
             outdegs.add(this.allMotif.get(node).sList.size());
             alldegs.add(this.allMotif.get(node).nList.size());
@@ -285,6 +372,13 @@ public class NodeSampleWeek {
             infreqs.add(this.allMotif.get(node).inFreq);
             outfreqs.add(this.allMotif.get(node).outFreq);
             allfreqs.add(this.allMotif.get(node).inFreq + this.allMotif.get(node).outFreq);
+
+            // test
+//            System.out.println(this.allMotif.get(node).rList.size() + " " +
+//                                this.allMotif.get(node).sList.size()+ " " +
+//                                this.allMotif.get(node).nList.size()+ " " +
+//                                this.allMotif.get(node).inFreq+ " " +
+//                                this.allMotif.get(node).outFreq);
         }
         int indegQuantile = MathUtil.percentile(indegs, per);
         int outdegQuantile = MathUtil.percentile(outdegs, per);
@@ -296,7 +390,7 @@ public class NodeSampleWeek {
 
         //update dictionary
         Iterator<Map.Entry<Long, Integer>> iter = this.dict.entrySet().iterator();
-        int countremove = 0;
+        int countRemove = 0;
         while (iter.hasNext()) {
             Map.Entry<Long, Integer> entry = iter.next();
             int id = entry.getValue();
@@ -305,77 +399,100 @@ public class NodeSampleWeek {
                 continue;
             }
             NodeMotif temp = this.allMotif.get(id);
-            if (temp.inFreq + temp.outFreq > thres & temp.inFreq * temp.outFreq == 0) {
+            // remove nodes with one-direction only communication and too large
+            if (temp.inFreq + temp.outFreq > thre & temp.inFreq * temp.outFreq == 0) {
                 iter.remove();
                 this.allMotif.remove(id);
-                countremove++;
+                countRemove++;
                 continue;
             }
-            if (temp.inFreq > infreqQuantile | temp.outFreq > outfreqQuantile
+            // remove nodes with too many calls
+            if (temp.inFreq > infreqQuantile
+                    | temp.outFreq > outfreqQuantile
                     | temp.inFreq + temp.outFreq > allfreqQuantile
                     | temp.rList.size() > indegQuantile
                     | temp.sList.size() > outdegQuantile
                     | temp.nList.size() > alldegQuantile) {
                 iter.remove();
                 this.allMotif.remove(id);
-                countremove++;
+                countRemove++;
                 continue;
             }
+            // thin frequencies by hard threshold, keeping only links stronger than it
+            temp.thinFreq(hardThre);
+            if (temp.sList.size() + temp.rList.size() == 0) {
+                iter.remove();
+                this.allMotif.remove(id);
+                countRemove++;
+                continue;
+            }
+
+            // rest nodes, remove all neighbour lists (since some of the nodes will be removed)
+            this.allMotif.get(id).reset();
+
         }
         System.out.println("Freq: " + infreqQuantile + " " + outfreqQuantile + " " + allfreqQuantile);
         System.out.println("Deg: " + indegQuantile + " " + outdegQuantile + " " + alldegQuantile);
 
-        System.out.println("Finished deleting outlier, deleted:    " + countremove);
+        System.out.println("Finished deleting outlier, deleted:    " + countRemove);
         System.out.println("Total new nodes read before deletion:  " + (nextindex - 1 - beforeindex));
         System.out.println("Total nodes after deleting outlier:    " + this.dict.size());
 
-        // second layer of filter
-        double threaFreq = 0.0;
-        ArrayList<Integer> tempFreq = new ArrayList<Integer>();
-        for (int node : this.allMotif.keySet()) {
-            if (this.allMotif.get(node).nListFreq != null) {
-                for (int i : this.allMotif.get(node).nListFreq.keySet()) {
-                    tempFreq.add(this.allMotif.get(node).nListFreq.get(i));
-                }
-            }
-        }
-        BufferedWriter brtemp = new BufferedWriter(new FileWriter("/data/rwanda_anon/richardli/freqs.txt"));
-        for (int i = 0; i < tempFreq.size(); i++) {
-            brtemp.write(tempFreq.get(i) + ",");
-        }
-        brtemp.close();
-        threaFreq = this.freqProcess(tempFreq);
 
-        System.out.println("Mimimum number of communication between two nodes is " + threaFreq);
 
-        // update dictionary the second time
-        if (threaFreq > hardThrea) hardThrea = (int) threaFreq;
-
-        Iterator<Map.Entry<Long, Integer>> iter2 = this.dict.entrySet().iterator();
-        countremove = 0;
-        while (iter2.hasNext()) {
-            int id = iter2.next().getValue();
-            if (this.allMotif.get(id) == null) {
-                System.out.println("!");
-                continue;
-            }
-            NodeMotif temp = this.allMotif.get(id);
-            temp.thinFreq(hardThrea);
-            if (temp.sList.size() + temp.rList.size() == 0) {
-                iter2.remove();
-                this.allMotif.remove(id);
-                countremove++;
-                continue;
-            }
-            this.allMotif.get(id).reset();
-        }
-        System.out.println("Finished deleting outlier from thinning edegs, deleted:    " + countremove);
+        /**
+         * following commented codes reformulate hard threshold by replacing with mean-3sd,
+         * sd usually too large and thus not used
+         */
+        //        // second layer of filter
+        //        double threFreq = 0.0;
+        //        ArrayList<Integer> tempFreq = new ArrayList<Integer>();
+        //        for (int node : this.allMotif.keySet()) {
+        //            if (this.allMotif.get(node).nListFreq != null) {
+        //                for (int i : this.allMotif.get(node).nListFreq.keySet()) {
+        //                    tempFreq.add(this.allMotif.get(node).nListFreq.get(i));
+        //                }
+        //            }
+        //        }
+        //        BufferedWriter brtemp = new BufferedWriter(new FileWriter("/data/rwanda_anon/richardli/freqs.txt"));
+        //        for (int i = 0; i < tempFreq.size(); i++) {
+        //            brtemp.write(tempFreq.get(i) + ",");
+        //        }
+        //        brtemp.close();
+        //        threFreq = this.freqProcess(tempFreq);
+        //
+        //        System.out.println("Mimimum number of communication between two nodes is " + threFreq);
+        //
+        //        // update dictionary the second time
+        //        if (threFreq > hardThre) hardThre = (int) threFreq;
+        //        Iterator<Map.Entry<Long, Integer>> iter2 = this.dict.entrySet().iterator();
+        //        countRemove = 0;
+        //        while (iter2.hasNext()) {
+        //            int id = iter2.next().getValue();
+        //            if (this.allMotif.get(id) == null) {
+        //                System.out.println("!");
+        //                continue;
+        //            }
+        //            NodeMotif temp = this.allMotif.get(id);
+        //            temp.thinFreq(hardThre);
+        //            if (temp.sList.size() + temp.rList.size() == 0) {
+        //                iter2.remove();
+        //                this.allMotif.remove(id);
+        //                countRemove++;
+        //                continue;
+        //            }
+        //            this.allMotif.get(id).reset();
+        //        }
+        //        System.out.println("Finished deleting outlier from thinning edges, deleted:    " + countRemove);
     }
-	/* sample only those with y value equal the input
-	 *  if not sample by outcome, then input y = Integer.MAX_Value
-	 *  if want indep nodes, set indep = TRUE
-	 */
 
+    /**
+     * Sample node (could be done by outcome variable)
+     *
+     *  @param len how many samples to take (upper limit)
+     *  @param y sample only nodes with certain outcome; if no outcome-specific requirement, set y = Integer.MAX_Value
+     *  @param indep Boolean, if only sampling non-connected egos
+     */
     public void sampleNode(int len, int y, boolean indep) {
         Set<Integer> population = new HashSet<Integer>();
         Set<Integer> nodes_appeared = new HashSet<Integer>();
@@ -451,78 +568,112 @@ public class NodeSampleWeek {
 //						}
 
 
-        String mmfile = "/data/rwanda_anon/CDR/me2u.ANON.all.txt";
+        // specify files to read
+        String mmfile = "/data/rwanda_anon/CDR/me2u.ANON-new.all.txt";
+        // specify date to avoid changing too much
+        String fileDates[] = new String[2];
+        fileDates[0] = "0705";  // 0705, 0805, 0809
+        fileDates[1] = "0706";  // 0706, 0806, 0810
+        String endDate = "0707"; //  0707, 0807, 0811
+
         String phonefile[] = new String[2];
-        phonefile[0] = "/data/rwanda_anon/CDR/0805-Call.pai.sordate.txt";
-        phonefile[1] = "/data/rwanda_anon/CDR/0806-Call.pai.sordate.txt";
-//		phonefile[2] = "/data/rwanda_anon/CDR/0703-Call.pai.sordate.txt";
-//		phonefile[3] = "/data/rwanda_anon/CDR/0704-Call.pai.sordate.txt";
-//		phonefile[4] = "/data/rwanda_anon/CDR/0705-Call.pai.sordate.txt";
-//		phonefile[5] = "/data/rwanda_anon/CDR/0706-Call.pai.sordate.txt";
+        phonefile[0] = "/data/rwanda_anon/CDR/"+ fileDates[0] + "-Call.pai.sordate.txt";
+        phonefile[1] = "/data/rwanda_anon/CDR/"+ fileDates[1] + "-Call.pai.sordate.txt";
 
+
+        // specify file header to output
+        String outputHeader = "/data/rwanda_anon/richardli/" + fileDates[0] + "week";
+
+        // parse start and end time
         SimpleDateFormat format = new SimpleDateFormat("yyMMdd|HH:mm:ss");
-        long t1 = format.parse("080501|00:00:00").getTime();
-        long t2 = format.parse("080701|00:00:00").getTime();
-        Calendar cal = Calendar.getInstance();
-        cal.setTime(format.parse("080501|00:00:00"));
+        long t1 = format.parse(fileDates[0] + "01|00:00:00").getTime();
+        long t2 = format.parse(endDate + "01|00:00:00").getTime();
+        int period = 7;
 
+        // set calendar
+        Calendar cal = Calendar.getInstance();
+        cal.setTime(format.parse(fileDates[0] + "01|00:00:00"));
+
+        // count number of days
         int nday = ((int) ((t2 - t1) / 1000 / (3600) / 24));
         System.out.printf("%d days in the period\n", nday);
-        int nweek = (int) nday / 7;
-        System.out.printf("%d weeks in the period\n", nweek);
+        int nPeriod = (int) (nday / (period + 0.0));
+        System.out.printf("%d periods in the period\n", nPeriod);
 
         // initialize mm file reader outside the loop
-        NodeSampleWeek fulldata = new NodeSampleWeek();
+        NodeSampleWeek fullData = new NodeSampleWeek();
 
-        for (int i = 0; i < nweek; i++) {
-            String output = "/data/rwanda_anon/richardli/0501week" + i + ".txt";
-            // define MMstart as the time when we consider as future MM sign-up
-            // define MMend as the max time in the future we are looking at
-            String Phonestart = format.format(cal.getTime()).substring(0, 6);
-            cal.add(Calendar.DATE, 7);
-            String MMstart = format.format(cal.getTime()).substring(0, 6);
-            String PhoneEnd = MMstart;
-            cal.add(Calendar.DATE, 7);
-            String MMend = format.format(cal.getTime()).substring(0, 6);
-            System.out.print("Steaming MM data from " + MMstart + " to " + MMend);
+        for (int i = 0; i < nPeriod; i++) {
+
+            String output =  outputHeader + i + ".txt";
+
+            // define phoneEnd as the time when we consider as future MM sign-up
+            // define MMEnd as the max time in the future we are looking at
+
+            // set phone start date to be current calendar date, and move forward a period
+            String phoneStart = format.format(cal.getTime()).substring(0, period - 1);
+
+            // set phone end date as current calendar date, and move forward a priod
+            cal.add(Calendar.DATE, period);
+            String phoneEnd = format.format(cal.getTime()).substring(0, period - 1);
+
+            // set MM end date as current calendar date
+            cal.add(Calendar.DATE, period);
+            String MMEnd = format.format(cal.getTime()).substring(0, period - 1);
+            System.out.print("Checking status of sign-up from " + phoneEnd + " to " + MMEnd + "\n");
+
+            // reset calendar to previous period again
+            cal.add(Calendar.DATE, period * (-1));
+
             // read MM file and update full data
-            fulldata.streamMM(mmfile, Integer.MAX_VALUE, MMstart, PhoneEnd, MMend);
-            System.out.print("Steaming MM" + MMstart + " to " + MMend + " done\n");
-            int hardThrea = 2;
-            fulldata.checkOutlier(phonefile, Integer.MAX_VALUE, Phonestart, PhoneEnd, 1000, 0.99, hardThrea, false);
-            fulldata.streamPhone(phonefile, Integer.MAX_VALUE, Phonestart, PhoneEnd, hardThrea);
+            fullData.streamMM(mmfile, Integer.MAX_VALUE, phoneStart, phoneEnd, MMEnd);
+            System.out.print("Checking status of sign-up done\n");
 
+            // set parameter, hard threshold and independent sampling
+            int hardThre = 2;
             boolean indep = false;
-            fulldata.sampleNode(Integer.MAX_VALUE, Integer.MAX_VALUE, indep);
-            fulldata.sampleNode(Integer.MAX_VALUE, 1, indep);
-            System.out.println("Sample of nodes signed up in this period: " + fulldata.sample.size());
-            // sample nodes without signing up
-            fulldata.sampleNode(Integer.MAX_VALUE, 0, indep);
-            System.out.println("Sample of nodes in the sample now:        " + fulldata.sample.size());
+
+            // check outlier  // TODO: outliers now are checked for each period, maybe better to check once for all
+            fullData.checkOutlier(phonefile, Integer.MAX_VALUE, phoneStart, phoneEnd, 1000, 0.99, hardThre, indep);
+            // stream phone data  //TODO: phone files always starts with the first one, going through previous dates is a waste
+            fullData.streamPhone(phonefile, Integer.MAX_VALUE, phoneStart, phoneEnd, hardThre);
+
+            // get all data without sampling
+            fullData.sampleNode(Integer.MAX_VALUE, Integer.MAX_VALUE, indep);
+            System.out.println("Sample of nodes in the sample now:        " + fullData.sample.size());
+
+            // sample Y = 1 nodes
+            //     fullData.sampleNode(Integer.MAX_VALUE, 1, indep);
+            //     System.out.println("Sample of nodes signed up in this period: " + fullData.sample.size());
+            // sample Y = 0 nodes
+            //     fullData.sampleNode(Integer.MAX_VALUE, 0, indep);
+
             // get all the data organized. Note this is necessary as those not in the sample could be reached by friendship map
-            for (int j : fulldata.allMotif.keySet()) {
-                fulldata.allMotif.get(j).organize();
+            for (int j : fullData.allMotif.keySet()) {
+                fullData.allMotif.get(j).organize();
             }
-            int tempcount = 0;
-            for (int j : fulldata.sample) {
-                if (fulldata.allMotif.get(j) == null) {
+
+            // count motifs
+            int tempCount = 0;
+            for (int j : fullData.sample) {
+                if (fullData.allMotif.get(j) == null) {
                     continue;
                 }
-                fulldata.allMotif.get(j).motifCount_wlabel(fulldata.allMotif);
-                tempcount++;
-                if (tempcount % 10000 == 0) System.out.printf("-");
+                fullData.allMotif.get(j).motifCount_wlabel(fullData.allMotif);
+                tempCount++;
+                if (tempCount % 10000 == 0) System.out.printf("-");
 
             }
 
-            // output to file
+            // output to file and remove motif counts
             BufferedWriter sc = new BufferedWriter(new FileWriter(output));
-            for (int j : fulldata.sample) {
-                if (fulldata.allMotif.get(j) == null) {
+            for (int j : fullData.sample) {
+                if (fullData.allMotif.get(j) == null) {
                     continue;
                 }
-                fulldata.allMotif.get(j).printto(sc, 121);
+                fullData.allMotif.get(j).printTo(sc, 121);
                 // wipe out fulldata.allMotif
-                fulldata.allMotif.get(j).swipe();
+                fullData.allMotif.get(j).swipe();
             }
             sc.close();
 

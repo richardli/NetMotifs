@@ -1,29 +1,13 @@
 package analysis;
 
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.FileReader;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.Random;
-import java.util.Set;
-
-
+import com.google.common.collect.Sets;
+import data.NodeMotif;
 import util.MathUtil;
 
-import com.google.common.collect.Sets;
-
-import data.NodeMotif;
+import java.io.*;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.*;
 
 public class NodeSample2 {
     public HashMap<Long, Integer> dict = new HashMap<Long, Integer>();
@@ -483,7 +467,7 @@ public class NodeSample2 {
         // output to file
         BufferedWriter sc = new BufferedWriter(new FileWriter(output));
         for (int i : fulldata.sample) {
-            fulldata.allmotif.get(i).printto(sc, 121);
+            fulldata.allmotif.get(i).printTo(sc, 121);
         }
         sc.close();
 

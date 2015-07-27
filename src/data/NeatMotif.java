@@ -6,7 +6,10 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.HashSet;
 
-
+/**
+ * Class used in logistic regression
+ *
+ */
 public class NeatMotif {
     int featurecount;
     HashMap<Integer, HashMap<Integer, Integer>> dict = new HashMap<Integer, HashMap<Integer, Integer>>();
@@ -22,7 +25,14 @@ public class NeatMotif {
         this.featurecount = featurecount;
     }
 
-
+    /**
+     *
+     * @param data
+     * @param deg
+     * @param maxPeriod
+     * @throws NumberFormatException
+     * @throws IOException
+     */
     public void read(String data, String deg, int maxPeriod) throws NumberFormatException, IOException {
         BufferedReader sc = new BufferedReader(new BufferedReader(new FileReader(data)));
         BufferedReader scdeg = new BufferedReader(new BufferedReader(new FileReader(deg)));

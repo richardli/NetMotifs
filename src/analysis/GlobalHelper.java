@@ -18,13 +18,13 @@ public class GlobalHelper {
     /**
      * helper function to parse time
      *
-     * @param field: string vector in the format of ["060101", "00:00:00"]
+     * @param field: string vector in the format of ["id1", "id2", "060101", "00:00:00"]
      * @return
      * @throws ParseException
      */
     public static double parseTime(String[] field) throws ParseException {
         SimpleDateFormat format = new SimpleDateFormat("yyMMdd|HH:mm:ss");
-        long time0 = format.parse(absoluteStartingValueString).getTime();
+        long time0 = format.parse("060101|00:00:00").getTime();
         StringBuilder timeString = new StringBuilder();
         timeString.append(field[2]);
         timeString.append("|");

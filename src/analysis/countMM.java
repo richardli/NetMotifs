@@ -1,16 +1,12 @@
 package analysis;
 
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.FileReader;
-import java.io.FileWriter;
-import java.io.IOException;
+import com.google.common.collect.Sets;
+
+import java.io.*;
 import java.text.ParseException;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Set;
-
-import com.google.common.collect.Sets;
 
 
 /**
@@ -94,7 +90,6 @@ public class countMM {
         Integer[] output = new Integer[4];
         output[0] = lastIndex;
         output[1] = sList.size();
-        output[2] = rList.size();
         output[3] = Sets.union(sList, rList).size();
         this.counts.put(lastIndex, output);
         br.close();

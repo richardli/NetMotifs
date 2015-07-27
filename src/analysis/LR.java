@@ -1,16 +1,14 @@
 package analysis;
 
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.FileReader;
-import java.io.FileWriter;
-import java.io.IOException;
+import data.NeatMotif;
+
+import java.io.*;
 import java.util.ArrayList;
 import java.util.HashMap;
 
-
-import data.NeatMotif;
-
+/**
+ * Logistic regression class
+ */
 public class LR {
     public class Weights {
         public double w0;
@@ -19,6 +17,9 @@ public class LR {
         public HashMap<Integer, Double> w = new HashMap<Integer, Double>();
         public HashMap<Integer, Integer> accessTime = new HashMap<Integer, Integer>();
 
+        /**
+         *
+         */
         public Weights() {
             w0 = 0.0;
             dim1 = 4;
@@ -45,6 +46,12 @@ public class LR {
         }
     }
 
+    /**
+     *
+     * @param wei
+     * @param instance
+     * @return
+     */
     private double computeProduct(Weights wei, HashMap<Integer, Double> instance) {
         // Fill in your code here
         double expProduct = 0.0;
@@ -55,6 +62,14 @@ public class LR {
         return Math.exp(expProduct);
     }
 
+    /**
+     *
+     * @param wei
+     * @param gradient
+     * @param step
+     * @param lambda
+     * @param instance
+     */
     private void updateWeight(Weights wei, double gradient, double step, double lambda,
                               HashMap<Integer, Double> instance) {
         wei.w0 += step * gradient;
@@ -65,6 +80,14 @@ public class LR {
         }
     }
 
+    /**
+     *
+     * @param wei
+     * @param instance
+     * @param now
+     * @param step
+     * @param lambda
+     */
     private static void performDelayedRegularization(Weights wei, HashMap<Integer, Double> instance,
                                                      int now, double step, double lambda) {
         for (int itr : instance.keySet()) {
@@ -81,6 +104,13 @@ public class LR {
         }
     }
 
+    /**
+     *
+     * @param wei
+     * @param now
+     * @param step
+     * @param lambda
+     */
     private static void performDelayedRegularizationLast(Weights wei, int now, double step, double lambda) {
 
         //System.out.println(wei.accessTime);
@@ -95,6 +125,18 @@ public class LR {
         }
     }
 
+    /**
+     *
+     * @param trainRMSE
+     * @param data
+     * @param step
+     * @param lambda
+     * @param maxTrain
+     * @param numtest
+     * @return
+     * @throws NumberFormatException
+     * @throws IOException
+     */
     public Weights trainReg(String trainRMSE, String data, double step, double lambda, int maxTrain, int numtest) throws NumberFormatException, IOException {
 
 
@@ -205,6 +247,18 @@ public class LR {
         return wei;
     }
 
+    /**
+     *
+     * @param wei
+     * @param data
+     * @param step
+     * @param lambda
+     * @param start
+     * @param maxTest
+     * @return
+     * @throws NumberFormatException
+     * @throws IOException
+     */
     public int[] TestReg(Weights wei, String data, double step, double lambda, int start, int maxTest) throws NumberFormatException, IOException {
 
 
@@ -267,6 +321,13 @@ public class LR {
     /*
      *  To run:
      *  java7lib analysis/LR indiv-24-1-60-0701-0701.txt 0.01 0.01 5
+     */
+
+    /**
+     *
+     * @param args
+     * @throws NumberFormatException
+     * @throws IOException
      */
     public static void main(String[] args) throws NumberFormatException, IOException {
         String train = "/data/rwanda_anon/richardli/trainRmse" + args[3] + "M.txt";

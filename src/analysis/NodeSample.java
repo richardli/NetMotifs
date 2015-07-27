@@ -71,7 +71,7 @@ public class NodeSample {
      *
      * In the above example,
      *      sign up before 070101: Y = -1, label = 1
-     *      sign up 070101 to 070630: Y = -1, label =
+     *      sign up 070101 to 070630: Y = -1, label = 1
      *      sign up 070701 to 071230: Y = 1, label = 0;
      *      sign up after 080101: ignore
      */
@@ -561,7 +561,7 @@ public class NodeSample {
         // output to file
         BufferedWriter sc = new BufferedWriter(new FileWriter(output));
         for (int i : fulldata.orderedSample) {
-            fulldata.allMotif.get(i).printto(sc, 121);
+            fulldata.allMotif.get(i).printTo(sc, 121);
         }
         sc.close();
 

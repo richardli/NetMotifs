@@ -1,13 +1,13 @@
 package data;
 
+import com.google.common.collect.Sets;
+
 import java.io.BufferedWriter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Set;
-
-import com.google.common.collect.Sets;
 
 /**
  *
@@ -131,7 +131,6 @@ public class NodeMotif {
     }
 
     /**
-     *
      * @param n
      */
     public void thinFreq(int n) {
@@ -518,7 +517,10 @@ public class NodeMotif {
         this.motif.put(7 + 2 * label0 + label1, this.diff(rs, this.nList));
     }
 
-    // calculate motifs with label
+    /**
+     * calculate motifs with label
+     * @param nodes HashMap of all the NodeMotifs
+     */
     public void motifCount_wlabel(HashMap<Integer, NodeMotif> nodes) {
         // if iso by itself, return with type 0
         if (this.nList.size() == 0) {
@@ -530,11 +532,11 @@ public class NodeMotif {
         } else {
             this.motif.put(0, 0);
         }
-
+        // count dyad
         this.dyadCount2_new(nodes);
 
 		/*
-		 * the order to call (0,1) and (1,0) should not be changed!
+		 * NOTE: the order to call (0,1) and (1,0) should not be changed!
 		 */
         this.triCount(nodes, 0, 0);
         this.triCount(nodes, 0, 1);
@@ -542,7 +544,7 @@ public class NodeMotif {
         this.triCount(nodes, 1, 1);
     }
 
-    public void printto(BufferedWriter sc, int nvar) throws IOException {
+    public void printTo(BufferedWriter sc, int nvar) throws IOException {
         StringBuilder sb = new StringBuilder();
         sb.append(this.y);
         sb.append(",");
