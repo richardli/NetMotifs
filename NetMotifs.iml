@@ -33,5 +33,6 @@
     <orderEntry type="library" exported="" name="guava-18.0" level="project" />
     <orderEntry type="library" exported="" name="commons-math3-3.3" level="project" />
     <orderEntry type="library" name="org.osgi.core-6.0.0" level="project" />
+    <orderEntry type="library" name="weka" level="project" />
   </component>
 </module>
