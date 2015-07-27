@@ -1,4 +1,5 @@
 # Folders 
+data/motif_counts/*
 .idea/*
 lib/*
 out/*
