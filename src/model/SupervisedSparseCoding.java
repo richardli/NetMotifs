@@ -2,11 +2,10 @@ package model;
 
 import java.util.Random;
 
-import util.Dimsum;
-import util.Gamma_func;
+import util.VectorUtil;
+import util.MathUtil;
 import util.MapWrapper;
 import util.Multinomial;
-import util.VecOperation;
 import util.WriteArray;
 
 import org.apache.commons.math3.distribution.MultivariateNormalDistribution;
@@ -65,8 +64,6 @@ import cern.jet.random.tdouble.engine.DoubleRandomEngine;
 			Binomial rngB = new Binomial(1, 0.5, rngEngine);
 			Beta rngBe = new Beta(1, 1, rngEngine);
 			Multinomial rngM = new Multinomial(P);
-			Dimsum dsum = new Dimsum();
-			Gamma_func ga = new Gamma_func();
 
 			// sparse representation of xsub
 			// in the form of Map<person, Map< 
@@ -134,7 +131,7 @@ import cern.jet.random.tdouble.engine.DoubleRandomEngine;
 				for(int i=0; i < N; i++){
 					for(int p=0; p<P; p++){
 						//System.out.printf("%f %f %f", gamma_now[p], ga.gamma(a), alpha_now[i][p]);
-						double term = gamma_now[p] * Math.pow(b, a)/ga.gamma(a) 
+						double term = gamma_now[p] * Math.pow(b, a)/MathUtil.gamma(a) 
 								* Math.pow(alpha_now[i][p], a-1); //*Math.exp(-1 * b * alpha_now[i][p]);
 						//System.out.printf(" -[%f]- ", term);
 						double prob = term / (term + (1 - gamma_now[p]) * epsilon * Math.exp((b - epsilon) * alpha_now[i][p]));
@@ -149,7 +146,7 @@ import cern.jet.random.tdouble.engine.DoubleRandomEngine;
 				/*
 				 * sample gamma
 				 */
-				int[] zsum = dsum.apply_sum(2, z_now);
+				int[] zsum = VectorUtil.apply_sum(2, z_now);
 				for(int p = 0; p < P; p++){
 					gamma_now[p] = rngBe.nextDouble(c + zsum[p],  d + N - zsum[p]);
 				}
@@ -177,7 +174,7 @@ import cern.jet.random.tdouble.engine.DoubleRandomEngine;
 				}
 				tau = rngG.nextDouble(tau_a + (P+1)/2, tau_b + sumSquare/2);
 							
-				// todo: update alpha part
+
 				/*
 				 * sample alpha
 				 */
@@ -189,9 +186,9 @@ import cern.jet.random.tdouble.engine.DoubleRandomEngine;
 			               a, b, epsilon, y, beta0_now, beta_now);
 				System.out.printf(".");
 				if(t % n_report == 0){
-					double spar = ((double)dsum.sum(zsum)) / (N * P + 0.0);
+					double spar = ((double)VectorUtil.vectorSum(zsum)) / (N * P + 0.0);
 					long now   = System.currentTimeMillis();
-					double ratio = ((double) dsum.sum(sampler.accept)) / (N * P * (t+1) + 0.0);
+					double ratio = ((double) VectorUtil.vectorSum(sampler.accept)) / (N * P * (t+1) + 0.0);
 					System.out.printf("\n-- %d --", t);
 					System.out.printf("Time -- %.2fmin --", (double) (now - start)/1000/60);
 					System.out.printf("Sparse -- %.6f, Accept -- %.4f\n", spar, ratio);
@@ -207,15 +204,15 @@ import cern.jet.random.tdouble.engine.DoubleRandomEngine;
 						wa.write(alpha_now, alpha_path, !first);
 						wa.write(beta_all, beta_path, !first);
 						System.out.printf("Itr %d sampled\n", t);
-						alpha_out = VecOperation.Add(alpha_out, alpha_now);
-						beta_out = VecOperation.Add(beta_out, beta_all);
+						alpha_out = VectorUtil.Add(alpha_out, alpha_now);
+						beta_out = VectorUtil.Add(beta_out, beta_all);
 						first = false;
 					}
 				}
 			}
-			alpha_out = VecOperation.Multi(alpha_out, 1/(T-burn+0.0));
-			beta_out = VecOperation.Multi(beta_out, 1/(T-burn+0.0));			
-			ratio_out = VecOperation.Multi(sampler.accept, 1/(T-burn+0.0));
+			alpha_out = VectorUtil.Multi(alpha_out, 1/(T-burn+0.0));
+			beta_out = VectorUtil.Multi(beta_out, 1/(T-burn+0.0));			
+			ratio_out = VectorUtil.Multi(sampler.accept, 1/(T-burn+0.0));
 			//return;
 			return(alpha_out);
 		}

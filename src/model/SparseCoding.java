@@ -2,11 +2,11 @@ package model;
 
 import java.util.Random;
 
-import util.Dimsum;
-import util.Gamma_func;
+import util.MathUtil;
+import util.VectorUtil;
 import util.MapWrapper;
 import util.Multinomial;
-import util.VecOperation;
+
 import cern.jet.random.tdouble.Beta;
 import cern.jet.random.tdouble.Binomial;
 import cern.jet.random.tdouble.Gamma;
@@ -48,8 +48,7 @@ public class SparseCoding {
 		Binomial rngB = new Binomial(1, 0.5, rngEngine);
 		Beta rngBe = new Beta(1, 1, rngEngine);
 		Multinomial rngM = new Multinomial(P);
-		Dimsum dsum = new Dimsum();
-		Gamma_func ga = new Gamma_func();
+
 
 		// sparse representation of xsub
 		// in the form of Map<person, Map< 
@@ -106,7 +105,7 @@ public class SparseCoding {
 			 */
 			for(int i=0; i < N; i++){
 				for(int p=0; p<P; p++){
-					double term = gamma_now[p] * Math.pow(b, a)/ga.gamma(a) 
+					double term = gamma_now[p] * Math.pow(b, a)/MathUtil.gamma(a)
 							* Math.pow(alpha_now[i][p], a-1)*Math.exp(-1 * b * alpha_now[i][p]);
 					double prob = term / (term + (1 - gamma_now[p]) * Math.exp(-1 * epsilon * alpha_now[i][p]));
 					if(prob * (1 - prob) == 0){
@@ -119,7 +118,7 @@ public class SparseCoding {
 			/*
 			 * sample gamma
 			 */
-			int[] zsum = dsum.apply_sum(2, z_now);
+			int[] zsum = VectorUtil.apply_sum(2, z_now);
 			for(int p = 0; p < P; p++){
 				gamma_now[p] = rngBe.nextDouble(c + zsum[p],  d + N - zsum[p]);
 			}
@@ -129,15 +128,15 @@ public class SparseCoding {
 			 */
 			for(int i = 0; i < N; i++){
 				for(int p = 0; p < P; p++){		
-					double shape = dsum.pick13_sum(i, p, xsub) + (a-1) * z_now[i][p] + 1;
-					double rate = dsum.sum(dict[p]) + b * z_now[i][p] + epsilon * (1-z_now[i][p]);
+					double shape = VectorUtil.pick13_sum(i, p, xsub) + (a-1) * z_now[i][p] + 1;
+					double rate = VectorUtil.vectorSum(dict[p]) + b * z_now[i][p] + epsilon * (1-z_now[i][p]);
 					alpha_now[i][p] = rngG.nextDouble(shape,rate);
 				}
 			}
 
 			System.out.printf(".");
 			if(t % n_report == 0){
-				double spar = dsum.sum(zsum) / (N * P + 0.0);
+				double spar = VectorUtil.vectorSum(zsum) / (N * P + 0.0);
 				long now   = System.currentTimeMillis();
 				System.out.printf("\n-- %d --", t);
 				System.out.printf("Time -- %.2fmin --", (double) (now - start)/1000/60);
@@ -147,11 +146,11 @@ public class SparseCoding {
 				//gamma_out[t-burn] = gamma_now.clone();
 				if(t % thin == 0){
 					System.out.printf("Itr %d sampled\n", t);
-					alpha_out = VecOperation.Add(alpha_out, alpha_now);
+					alpha_out = VectorUtil.Add(alpha_out, alpha_now);
 				}
 			}
 		}
-		alpha_out = VecOperation.Multi(alpha_out, 1/(T-burn+0.0));
+		alpha_out = VectorUtil.Multi(alpha_out, 1/(T-burn+0.0));
 		//return(gamma_out);
 		return(alpha_out);
 	}
