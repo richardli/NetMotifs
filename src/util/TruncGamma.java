@@ -4,9 +4,26 @@ import java.util.Random;
 
 import org.apache.commons.math3.distribution.GammaDistribution;
 
+/**
+ *      Perform truncated Gamma distribution sampling
+ *
+ *      @author zehangli
+ *      last update: 07-27-15
+ *
+ */
 public class TruncGamma {
-	
-	public double truncGamma(double a, double b, 
+
+    /**
+     *  Sample a r.v. from truncated gamma distribution
+     *
+     * @param a gamma alpha
+     * @param b gamma beta
+     * @param min lower truncation
+     * @param max upper truncation
+     * @param rand random number generator
+     * @return
+     */
+	public static double truncGamma(double a, double b,
 							double min, double max, Random rand){
 		GammaDistribution gamma = new GammaDistribution(a, b);
 		if(min < 0) min = 0;

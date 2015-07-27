@@ -2,6 +2,13 @@ package model;
 
 import weka.core.Optimization;
 
+/**
+ * Class for Laplace approximation used in Sparse Coding
+ *
+ * @author zehang li
+ * Last update: 07-27-2015
+ *
+ */
 class Laplace extends Optimization {
    // Provide the objective function
    double A = 0.0;
@@ -82,7 +89,7 @@ class Laplace extends Optimization {
 
 @Override
 public String getRevision() {
-	// TODO Auto-generated method stub
+	// TODO: Auto-generated method stub
 	return null;
 }
  }

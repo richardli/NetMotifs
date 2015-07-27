@@ -6,7 +6,13 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 
-
+/**
+ * Class for logistic regression using stochastic gradient descent
+ *
+ * @author zehang li
+ * Last update: 07-27-2015
+ *
+ */
 public class LogisticRegression{
 	int N;
 	int M;

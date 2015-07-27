@@ -5,7 +5,13 @@ import cern.jet.random.tdouble.engine.DoubleMersenneTwister;
 import cern.jet.random.tdouble.engine.DoubleRandomEngine;
 
 //import java.util.*;
- 
+
+/**
+ * Class for testing simple Gibbs setup
+ * @author zehang li
+ * Last update: 07-27-15
+ *
+ */
 class Gibbs
 {
  

@@ -11,7 +11,13 @@ import org.apache.commons.math3.linear.MatrixUtils;
 import org.apache.commons.math3.linear.QRDecomposition;
 import org.apache.commons.math3.linear.RealMatrix;
 
-
+/**
+ * Class for logistic regression using IRLS
+ *
+ * @author zehang li
+ * Last update:07-27-2015
+ *
+ */
 public class LogisticRegressionIRLS{
 	int N;
 	int M;
