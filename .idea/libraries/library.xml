@@ -1,7 +1,18 @@
 <component name="libraryTable">
   <library name="library">
-    <CLASSES />
-    <JAVADOC />
-    <SOURCES />
+    <CLASSES>
+      <root url="file://$PROJECT_DIR$/library" />
+    </CLASSES>
+    <JAVADOC>
+      <root url="file://$PROJECT_DIR$/library/mahout-distribution-0.9/docs/mahout-core" />
+      <root url="file://$PROJECT_DIR$/library/mahout-distribution-0.9/docs/mahout-examples" />
+      <root url="file://$PROJECT_DIR$/library/mahout-distribution-0.9/docs/mahout-integration" />
+      <root url="file://$PROJECT_DIR$/library/mahout-distribution-0.9/docs/mahout-math" />
+    </JAVADOC>
+    <SOURCES>
+      <root url="file://$PROJECT_DIR$/library" />
+    </SOURCES>
+    <jarDirectory url="file://$PROJECT_DIR$/library" recursive="false" />
+    <jarDirectory url="file://$PROJECT_DIR$/library" recursive="false" type="SOURCES" />
   </library>
 </component>
