@@ -2,9 +2,9 @@ package model;
 
 import java.util.Random;
 
-import util.Dimsum;
+import util.MathUtil;
 import util.MapWrapper;
-import util.TruncGamma;
+import util.VectorUtil;
 import cern.jet.random.tdouble.Gamma;
 import cern.jet.random.tdouble.Normal;
 
@@ -26,11 +26,10 @@ public class AlphaSampler {
 	 */
 	public double[][] unsupervised(MapWrapper[][] xsub, int[][] z_now, double[][] dict, 
 			double a, double b, double epsilon, Gamma rngG){
-		Dimsum dsum = new Dimsum();
 		for(int i = 0; i < N; i++){
 			for(int p = 0; p < P; p++){		
-				double shape = dsum.pick13_sum(i, p, xsub) + (a-1) * z_now[i][p] + 1;
-				double rate = dsum.sum(dict[p]) + b * z_now[i][p] + epsilon * (1-z_now[i][p]);
+				double shape = VectorUtil.pick13_sum(i, p, xsub) + (a-1) * z_now[i][p] + 1;
+				double rate = VectorUtil.vectorSum(dict[p]) + b * z_now[i][p] + epsilon * (1-z_now[i][p]);
 				this.alpha_now[i][p] = rngG.nextDouble(shape,rate);
 			}
 		}
@@ -112,7 +111,6 @@ public class AlphaSampler {
 				alpha_prev[i][j] = this.alpha_now[i][j];
 			}
 		}
-		Dimsum dsum = new Dimsum();
 		for(int i = 0; i < this.N; i++){
 			// calculate alpha * beta + beta0
 			double alpha_beta_prev = beta0;
@@ -130,10 +128,10 @@ public class AlphaSampler {
 				// Update the ratio calculation here!
 				double loglik1 = 0.0;
 				double loglik2 = 0.0;
-				loglik1 += loglik_first(dsum.pick13_sum(i, p, xsub), z_now[i][p], dsum.sum(dict[p]), 
+				loglik1 += loglik_first(VectorUtil.pick13_sum(i, p, xsub), z_now[i][p], VectorUtil.vectorSum(dict[p]),
 						                alpha_prev[i][p], 
 						                a, b, epsilon, beta[p], y[i]); 
-				loglik2 += loglik_first(dsum.pick13_sum(i, p, xsub), z_now[i][p], dsum.sum(dict[p]), 
+				loglik2 += loglik_first(VectorUtil.pick13_sum(i, p, xsub), z_now[i][p], VectorUtil.vectorSum(dict[p]),
 										alpha_now[i][p], 
 										a, b, epsilon, beta[p], y[i]); 
 				loglik1 += loglik_second(alpha_beta_prev);
@@ -167,7 +165,6 @@ public class AlphaSampler {
 //				alpha_prev[i][j] = this.alpha_now[i][j];
 //			}
 //		}
-		Dimsum dsum = new Dimsum();
 		double[][] constraint = new double[2][1];
 		constraint[0][0] = -10;
 		constraint[1][0] = 10;
@@ -178,8 +175,8 @@ public class AlphaSampler {
 				for(int pp = 0; pp< this.P; pp++){
 					alpha_beta_prev += this.alpha_now[i][pp] * beta[pp];
 				}	
-				double x_sumj = dsum.pick13_sum(i, p, xsub);
-				double d_sumj = dsum.sum(dict[p]);
+				double x_sumj = VectorUtil.pick13_sum(i, p, xsub);
+				double d_sumj = VectorUtil.vectorSum(dict[p]);
 				Laplace lap = new Laplace();
 				lap.initiate(x_sumj, d_sumj,  z_now[i][p],
 						this.alpha_now[i][p], alpha_beta_prev, 
