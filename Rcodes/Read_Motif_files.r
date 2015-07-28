@@ -38,6 +38,12 @@ for(i in 1:n0){
 
 		print(table(Y)/length(Y))
 		allMotifs <- rbind(allMotifs, tmp2)
+
+		# also save individual files
+		colnames(tmp2) <- c(colnames(motif), "Y", "T", 
+							"inFreq", "outFreq", "sSize", "rSize", "mSize", "nSize", "Range", "Period")
+		motif <- data.frame(tmp2)
+		save(motif, file = paste("Motifs_g", i, "p", j, ".rda", sep=""))
 	}
 }
 # more formating

@@ -80,7 +80,7 @@ for(i in 1:121){
 	glist[[i]] <- g
 }
 
-gg121("Motif_fraction_over_time.pdf", glist = glist)
+gg121("../figures/Motif_fraction_over_time.pdf", glist = glist)
 
 glist <- NULL
 for(i in 1:121){
@@ -91,9 +91,9 @@ for(i in 1:121){
 	vname <- paste("mtf.mean", i - (i > 61))
 	g <- ggplot(subset(sMotifs.2, Motif == vname))
 	g <- g + geom_line(aes(x = Period, y = Count))
-	g <- g + facet_wrap(~ Range) + ylim(c(0, 5.13))	
+	g <- g + facet_wrap(~ Range) + ylim(c(0, 51.3))	
 	glist[[i]] <- g
 }
 
-gg121("Motif_mean_over_time.pdf", glist = glist)
+gg121("../figures/Motif_mean_over_time.pdf", glist = glist)
 
