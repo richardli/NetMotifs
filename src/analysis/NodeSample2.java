@@ -2,7 +2,7 @@ package analysis;
 
 import com.google.common.collect.Sets;
 import data.NodeMotif;
-import util.MathUtil;
+import util.VectorUtil;
 
 import java.io.*;
 import java.text.ParseException;
@@ -249,12 +249,12 @@ public class NodeSample2 {
             outfreqs.add(this.allmotif.get(node).outFreq);
             allfreqs.add(this.allmotif.get(node).inFreq + this.allmotif.get(node).outFreq);
         }
-        int indegQuantile = MathUtil.percentile(indegs, per);
-        int outdegQuantile = MathUtil.percentile(outdegs, per);
-        int alldegQuantile = MathUtil.percentile(alldegs, per);
-        int infreqQuantile = MathUtil.percentile(infreqs, per);
-        int outfreqQuantile = MathUtil.percentile(outfreqs, per);
-        int allfreqQuantile = MathUtil.percentile(allfreqs, per);
+        int indegQuantile = VectorUtil.percentile(indegs, per);
+        int outdegQuantile = VectorUtil.percentile(outdegs, per);
+        int alldegQuantile = VectorUtil.percentile(alldegs, per);
+        int infreqQuantile = VectorUtil.percentile(infreqs, per);
+        int outfreqQuantile = VectorUtil.percentile(outfreqs, per);
+        int allfreqQuantile = VectorUtil.percentile(allfreqs, per);
 
 
         //update dictionary
