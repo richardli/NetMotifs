@@ -1,7 +1,3 @@
-## on linux, run "R CMD javareconf -e" first somehow?
-## /System/Library/Java/JavaVirtualMachines/1.6.0.jdk/Contents/Home/bin/javac -cp ~/rjava_space/ParallelColt/parallelcolt-0.9.4/ *.java math/*.java
-
-
 # load("~/Dropbox/network_evolution/motif-data/data_0701-0706_indep/motif6month-indep.rda")
 # load("~/rjava_space/data/motif6month-indep.rda")
 args <- commandArgs(trailingOnly = TRUE)

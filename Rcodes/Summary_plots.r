@@ -15,13 +15,19 @@ sMotifs.1 <- melt(sMotifs.1, id=c("Range","Period"))
 colnames(sMotifs.1)[3:4] <- c("Status", "Count")
 sMotifs.1$Fraction <- sMotifs.1$Count / rep(norm, 3)
 
+pdf("../figures/hist.pdf", width = 10, height = 6)
 g1 <- ggplot(data = sMotifs.1)
 g1 <- g1 + geom_bar(aes(x = Period, y = Count, fill = Status), 
 					stat ="identity", alpha = 0.9)
 g1 <- g1 + facet_wrap(~ Range)
+g1 <- g1 + theme(strip.text.x = element_text(size = 12))
 g1 <- g1 + scale_fill_manual(values = c("#009E73", "#56B4E9", "#E69F00"))
 g1 <- g1 + ggtitle("Sign-up status over time")
+g1 <- g1 + theme(plot.title = element_text(vjust = 2))
+g1 <- g1 + scale_y_continuous(breaks= (c(1:10) * 1e5), 
+				labels = c(paste(seq(0.1, 0.9, 0.1), "M", sep=""),"1M"))
 g1
+dev.off()
 
 g2 <- ggplot(data = sMotifs.1)
 g2 <- g2 + geom_bar(aes(x = Period, y = Fraction, fill = Status), 

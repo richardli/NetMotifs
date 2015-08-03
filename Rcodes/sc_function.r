@@ -1,55 +1,4 @@
 #'
-#' Function to extract common dictionary
-#' 
-#' @author Richard Li
-#'
-#' @param
-#' @param
-#' @param
-#' @param
-#' @param
-#'
-#'
-#'
-default_dict <- function(){
-
-}
-
-#'
-#' Function to extract K-means dictionary
-#' 
-#' @author Richard Li
-#'
-#' @param
-#' @param
-#' @param
-#' @param
-#' @param
-#'
-#'
-#'
-kmean_dict <- function(){
-
-}
-
-#'
-#' Function to extract Higher-order dictionary
-#' 
-#' @author Richard Li
-#'
-#' @param
-#' @param
-#' @param
-#' @param
-#' @param
-#'
-#'
-#'
-higher_dict <- function(){
-
-}
-
-#'
 #' Function to perform sparse coding
 #' 
 #' @author Richard Li
@@ -62,14 +11,6 @@ higher_dict <- function(){
 #'
 #'
 #' @example
-load("../data/motif_counts/Motifs_g1p1.rda")
-mdata <- motif
-dict <- getdict()
-setwd("../src")
-alpha <- sc_run_unsup(mdata, dict, Nsim = 100, jpar = "-Xms4g", nSample = 1000, 
-					libDir = "../library/")
-supfit <- sc_run_sup(mdata, dict, Nsim = 100, jpar = "-Xms4g", nSample = 1000, 
-					libDir = "../library/")
 
 sc_run_unsup <- function(mdata, dict, Nsim = 4000, Burn = 0, Thin = 1, 
 						 a = 10, b = 1, c = 1, d = 1, epsilon = 1000, 
