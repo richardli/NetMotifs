@@ -184,9 +184,15 @@ public class AlphaSampler {
 				double[] prev = new double[1];
 				prev[0] = Math.log(this.alpha_now[i][p]);
 				double[] tempMean = lap.findArgmin(prev, constraint);
-				double tempH = lap.calculateHessian(tempMean[0]);
-				//System.out.printf("mean%f-sd%f\n", tempMean[0], -1/tempH);
-				this.alpha_now[i][p] = Math.exp(rngN.nextDouble(tempMean[0], -1/tempH));
+                double thisMean = 0;
+                if(tempMean != null){
+                    thisMean = tempMean[0];
+                    double tempH = lap.calculateHessian(thisMean);
+                    //System.out.printf("mean%f-sd%f\n", tempMean[0], -1/tempH);
+                    this.alpha_now[i][p] = Math.exp(rngN.nextDouble(thisMean, -1/tempH));
+                }else{
+                    this.alpha_now[i][p] = 0.000001;
+                }
 			}
 		}	
 		return(this.alpha_now);

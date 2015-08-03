@@ -126,8 +126,15 @@ public class LogisticRegressionIRLS{
 			}
 		}
 		double[][] invH = new double[this.M+1][this.M+1];
-		
-		if(corr){
+        for(int i = 0; i < 5; i++){
+            for(int j = 0; j < 5; j++){
+                System.out.printf("%.2f ", H[i][j]);
+            }
+            System.out.print("\n");
+        }
+        System.out.print("\n");
+
+        if(corr){
 			 RealMatrix mH = MatrixUtils.createRealMatrix(H);
 			 RealMatrix minvH = new QRDecomposition(mH).getSolver().getInverse();
 			 //double det = new LUDecomposition(mH).getDeterminant();

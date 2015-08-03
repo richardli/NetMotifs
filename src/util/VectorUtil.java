@@ -1,11 +1,87 @@
 package util;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.Set;
+import java.io.BufferedWriter;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.util.*;
 
 public class VectorUtil {
+    /**
+     * Save a 2-d array to file
+     */
+    public static void save2d(double[][] vec, String file) throws IOException {
+        BufferedWriter bw = new BufferedWriter(new FileWriter(file));
+        bw.write(VectorUtil.write2d(vec));
+        bw.close();
+    }
+    /**
+     * convert a 2-d array to string
+     */
+    public static String write2d(double[][] array){
+        StringBuilder out = new StringBuilder();
+        for(int j = 0; j < array.length; j++){
+            out.append(Arrays.toString(array[j]).replace("[", "").replace("]", "\n"));
+        }
+        return(out.toString());
+    }
+    public static String write2d(int[][] array){
+        StringBuilder out = new StringBuilder();
+        for(int j = 0; j < array.length; j++){
+            out.append(Arrays.toString(array[j]).replace("[", "").replace("]", "\n"));
+        }
+        return(out.toString());
+    }
+
+
+    /**
+     * Save a 3-d array to file
+     */
+    public static void save3d(double[][][] vec, String file) throws IOException {
+        BufferedWriter bw = new BufferedWriter(new FileWriter(file));
+        bw.write(VectorUtil.write3d(vec));
+        bw.close();
+    }
+    /**
+     * convert a 3-d array to string
+     */
+    public static String write3d(double[][][] array){
+        StringBuilder out = new StringBuilder();
+        for(int i = 0; i < array.length; i++){
+            for(int j = 0; j < array[0].length; j++){
+                out.append(Arrays.toString(array[i][j]).replace("[", "").replace("]", "\n"));
+            }
+        }
+        return(out.toString());
+    }
+    public static String write3d(int[][][] array){
+        StringBuilder out = new StringBuilder();
+        for(int i = 0; i < array.length; i++){
+            for(int j = 0; j < array[0].length; j++){
+                out.append(Arrays.toString(array[i][j]).replace("[", "").replace("]", "\n"));
+            }
+        }
+        return(out.toString());
+    }
+
+    /**
+     * fill selected dimension of a 3-d array
+     *
+     */
+    public static void fillselected(double[][][] arraylong, int ind, double[][] array){
+        for(int i = 0; i < arraylong[ind].length; i++){
+            for(int j = 0; j < arraylong[ind][0].length; j++){
+                arraylong[ind][i][j] = array[i][j];
+            }
+        }
+    }
+
+    public static void fillselected(int[][][] arraylong, int ind, int[][] array){
+        for(int i = 0; i < arraylong[ind].length; i++){
+            for(int j = 0; j < arraylong[ind][0].length; j++){
+                arraylong[ind][i][j] = array[i][j];
+            }
+        }
+    }
 
     /**
      * Calculate percentile for an integer array

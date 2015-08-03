@@ -4,9 +4,7 @@ import com.google.common.collect.Sets;
 import data.NodeMotif;
 import util.VectorUtil;
 
-import javax.swing.plaf.synth.SynthOptionPaneUI;
 import java.io.*;
-import java.net.SocketPermission;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.*;

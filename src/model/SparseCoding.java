@@ -58,8 +58,8 @@ public class SparseCoding {
 		int[][] z_now = new int[N][P];
 		double[] gamma_now = new double[P];
 		//double[][] gamma_out = new double[T-burn][P];
-		//double[][][] alpha_out = new double[T-burn][N][P];
 		double[][] alpha_out = new double[N][P];
+		// double[][] alpha_out = new double[N][P];
 		int n_report = T / 100;
 		if(T < 100) n_report = 1;
 
@@ -146,12 +146,13 @@ public class SparseCoding {
 				//gamma_out[t-burn] = gamma_now.clone();
 				if(t % thin == 0){
 					System.out.printf("Itr %d sampled\n", t);
+//                    VectorUtil.fillselected(alpha_out, t - burn + 1, alpha_now);
 					alpha_out = VectorUtil.Add(alpha_out, alpha_now);
 				}
 			}
 		}
 		alpha_out = VectorUtil.Multi(alpha_out, 1/(T-burn+0.0));
-		//return(gamma_out);
+//		return(gamma_out);
 		return(alpha_out);
 	}
 }

@@ -2,6 +2,10 @@ package model;
 
 import java.util.Random;
 
+import org.apache.commons.math3.linear.LUDecomposition;
+import org.apache.commons.math3.linear.MatrixUtils;
+import org.apache.commons.math3.linear.QRDecomposition;
+import org.apache.commons.math3.linear.RealMatrix;
 import util.VectorUtil;
 import util.MathUtil;
 import util.MapWrapper;
@@ -17,7 +21,8 @@ import cern.jet.random.tdouble.Normal;
 import cern.jet.random.tdouble.engine.DoubleMersenneTwister;
 import cern.jet.random.tdouble.engine.DoubleRandomEngine;
 
-	public class SupervisedSparseCoding {
+
+public class SupervisedSparseCoding {
 
 		public double[][] main(
 				double a, double b, double c, double d, double epsilon,
@@ -158,7 +163,17 @@ import cern.jet.random.tdouble.engine.DoubleRandomEngine;
 				double[] betam = logistic.coef();
 				System.out.printf("beta0 mean %.4f, beta1 mean %.4f, , beta2 mean %.4f\n", betam[0], betam[1], betam[2]);
 				double[][] var = logistic.getCovMatrix(tau, true);
-				MultivariateNormalDistribution rngMN = new MultivariateNormalDistribution(betam, var);
+//                for(int i = 0; i < 10; i++){
+//                    for(int j = 0; j < 10; j++){
+//                        System.out.print(var[i][j] + ",");
+//                    }
+//                    System.out.print("\n");
+//                }
+                RealMatrix test = MatrixUtils.createRealMatrix(var);
+                double det = new LUDecomposition(test).getDeterminant();
+                System.out.println(det);
+
+                MultivariateNormalDistribution rngMN = new MultivariateNormalDistribution(betam, var);
 				double[] betaNew = rngMN.sample();
 //				for(double n: betaNew) {
 //				    System.out.printf("%.4f   ", n);
@@ -173,7 +188,8 @@ import cern.jet.random.tdouble.engine.DoubleRandomEngine;
 					sumSquare += beta_now[ii] * beta_now[ii];
 				}
 				tau = rngG.nextDouble(tau_a + (P+1)/2, tau_b + sumSquare/2);
-							
+                System.out.println("tau_a: " +(tau_a + (P+1)/2) + "  tau_b: "+(tau_b + sumSquare/2) + "  tau: " + tau);
+
 
 				/*
 				 * sample alpha
