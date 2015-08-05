@@ -4,9 +4,17 @@
 # load data
 library(ggplot2)
 library(reshape)
-load("../Data/motif_counts/allMotifs_summary.rda")
+load("../data/motif_counts/allMotifs_summary.rda")
+load("../data/MMuserdaily.rda")
+dim(data)
 dim(sMotifs)
 class(sMotifs)
+
+# plot MM daily volume
+g <- ggplot(aes(x=date, y=count), data=count)
+g <- g + geom_point()
+g <- g + theme_bw()
+g
 
 # first plot, signed-up v.s. not signed-up v.s. will sign-up
 sMotifs.1 <- sMotifs[, c(1, 2, 369:371)]
