@@ -81,7 +81,9 @@ public class SupervisedSparseCoding {
 			double[][] ratio_out = new double[N][P];
 			double beta0_now = 0.0;
 			double[] beta_now = new double[P];
-			double[] beta_out = new double[P+1];
+
+            int N_thin = ((int) ((T-burn) / (thin + 0.0)));
+            double[][] beta_out = new double[N_thin][P+1];
 	
 			String alpha_path = "trace_alpha.txt";
 			String beta_path = path;
@@ -209,27 +211,33 @@ public class SupervisedSparseCoding {
 					System.out.printf("Time -- %.2fmin --", (double) (now - start)/1000/60);
 					System.out.printf("Sparse -- %.6f, Accept -- %.4f\n", spar, ratio);
 				}
-				if(t > burn){
+				if(t >= burn && (t-burn+1) % thin == 0){
 					//gamma_out[t-burn] = gamma_now.clone();
 					if(t % thin == 0){
-						double[] beta_all = new double[P+1];
-						beta_all[0] = beta0_now;
-						for(int ii = 0; ii < P; ii++){
-							beta_all[ii+1] = beta_now[ii];
+//						double[] beta_all = new double[P+1];
+//						beta_all[0] = beta0_now;
+//						for(int ii = 0; ii < P; ii++){
+//							beta_all[ii+1] = beta_now[ii];
+//						}
+//						wa.write(alpha_now, alpha_path, !first);
+//						wa.write(beta_all, beta_path, !first);
+//						System.out.printf("Itr %d sampled\n", t);
+//						alpha_out = VectorUtil.Add(alpha_out, alpha_now);
+//						beta_out = VectorUtil.Add(beta_out, beta_all);
+//						first = false;
+                        int save = (int) ((t - burn + 1) / (thin + 0.0)) - 1;
+                        beta_out[save][0] = beta0_now;
+                        for(int ii = 0; ii < P; ii++){
+                            beta_out[save][ii+1] = beta_now[ii];
 						}
-						wa.write(alpha_now, alpha_path, !first);
-						wa.write(beta_all, beta_path, !first);
-						System.out.printf("Itr %d sampled\n", t);
-						alpha_out = VectorUtil.Add(alpha_out, alpha_now);
-						beta_out = VectorUtil.Add(beta_out, beta_all);
-						first = false;
+
 					}
 				}
 			}
-			alpha_out = VectorUtil.Multi(alpha_out, 1/(T-burn+0.0));
-			beta_out = VectorUtil.Multi(beta_out, 1/(T-burn+0.0));			
-			ratio_out = VectorUtil.Multi(sampler.accept, 1/(T-burn+0.0));
+//			alpha_out = VectorUtil.Multi(alpha_out, 1/(T-burn+0.0));
+//			beta_out = VectorUtil.Multi(beta_out, 1/(T-burn+0.0));
+//			ratio_out = VectorUtil.Multi(sampler.accept, 1/(T-burn+0.0));
 			//return;
-			return(alpha_out);
+			return(beta_out);
 		}
 	}

@@ -92,7 +92,7 @@ set3 <- 20:26
 
 
 # same plot
-pdf("../figures/unsup-fig1.pdf", width = 12, height = 5)
+pdf("../figures/unsup-fig1.pdf", width = 12, height = 5.5)
 g1 <- ggplot(data = subset(all.coef, type.num %in% set3))
 g1 <- g1 + geom_point(aes(x = week, y = beta), 
 					  size = 2)
@@ -102,7 +102,7 @@ g1 <- g1 + geom_errorbar(aes(x = week, y = beta, color = period,
 						ymin = beta-1.96*SE, ymax = beta+1.96*SE), 
 						size = .5, width = .5, alpha = .8)
 g1 <- g1 + facet_grid(~ type)
-g1 <- g1 + scale_color_manual(values = c("#0072B2", "#D55E00"))
+g1 <- g1 + scale_color_manual(values = c("#009E73", "#0072B2", "#D55E00"))
 g1 <- g1 + geom_hline(yintercept=0, color = "red", 
 	alpha = 0.5, linetype ="longdash")
 g1 <- g1 + ggtitle("")+ theme_bw()
@@ -111,7 +111,7 @@ g1
 dev.off()
 
 
-pdf("../figures/unsup-fig2.pdf", width = 15, height = 5)
+pdf("../figures/unsup-fig2.pdf", width = 15, height = 5.5)
 g1 <- ggplot(data = subset(all.coef, type.num %in% set1))
 g1 <- g1 + geom_point(aes(x = week, y = beta), 
 					  size = 2)
@@ -121,13 +121,34 @@ g1 <- g1 + geom_errorbar(aes(x = week, y = beta, color = period,
 						ymin = beta-1.96*SE, ymax = beta+1.96*SE), 
 						size = .5, width = .5, alpha = .8)
 g1 <- g1 + facet_grid(~ type)
-g1 <- g1 + scale_color_manual(values = c("#0072B2", "#D55E00"))
+g1 <- g1 + scale_color_manual(values = c("#009E73", "#0072B2", "#D55E00"))
 g1 <- g1 + geom_hline(yintercept=0, color = "red", 
 	alpha = 0.5, linetype ="longdash")
 g1 <- g1 + ggtitle("")+ theme_bw()
 g1 <- g1 + theme( panel.grid.minor = element_blank())
 g1
 dev.off()
+
+
+
+pdf("../figures/unsup-fig4.pdf", width = 15, height = 5.5)
+g1 <- ggplot(data = subset(all.coef, type.num %in% set1))
+g1 <- g1 + geom_point(aes(x = week, y = beta), 
+					  size = 2)
+g1 <- g1 + geom_line(aes(x = week, y = beta, color = type), 
+					 alpha = .5)
+g1 <- g1 + geom_errorbar(aes(x = week, y = beta, color = type,
+						ymin = beta-1.96*SE, ymax = beta+1.96*SE), 
+						size = .5, width = .1, alpha = .8)
+g1 <- g1 + facet_grid(type ~ period, scales = "fixed")
+# g1 <- g1 + scale_color_manual(values = c("#009E73", "#0072B2", "#D55E00"))
+g1 <- g1 + geom_hline(yintercept=0, color = "red", 
+	alpha = 0.5, linetype ="longdash")
+g1 <- g1 + ggtitle("")+ theme_bw()
+g1 <- g1 + theme( panel.grid.minor = element_blank())
+g1
+dev.off()
+
 
 # separate panels
 g1 <- ggplot(data = subset(all.coef, type.num %in% set1))
@@ -139,7 +160,7 @@ g1 <- g1 + geom_errorbar(aes(x = week, y = beta, color = period,
 						ymin = beta-1.96*SE, ymax = beta+1.96*SE), 
 						size = .5, width = .5, alpha = .8)
 g1 <- g1 + facet_grid(period ~ type)
-g1 <- g1 + scale_color_manual(values=c("#0072B2","#D55E00"), guide="none")
+g1 <- g1 + scale_color_manual(values=c("#009E73","#0072B2","#D55E00"), guide="none")
 g1 <- g1 + geom_hline(yintercept=0, color = "red", 
 	alpha = 0.5, linetype ="longdash")
 g1 <- g1 + ggtitle("") + theme_bw()
