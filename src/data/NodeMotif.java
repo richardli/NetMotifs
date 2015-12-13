@@ -67,6 +67,11 @@ public class NodeMotif {
         }
     }
 
+
+    public NodeMotif(){
+
+    }
+
     /** initialization with known negative outcome
      *
      * @param id the index of this node
@@ -131,7 +136,7 @@ public class NodeMotif {
     }
 
     /**
-     * @param n
+     * @param n lower threshold of counting
      */
     public void thinFreq(int n) {
         HashSet<Integer> remain = new HashSet<Integer>();
@@ -170,7 +175,7 @@ public class NodeMotif {
 
     // helper function to get the set needed, with specified Y value
     // indicators: s-1, r-2, m-3, n-4
-    public Set<Integer> getNei(int t0, int label, HashMap<Integer, NodeMotif> nodes) {
+    public Set<Integer> getNei(int t0, int label, NodeMotifHashMap nodeMap) {
         Set<Integer> toget = new HashSet<Integer>();
         if (t0 == 1) {
             toget = this.sList;
@@ -183,7 +188,7 @@ public class NodeMotif {
         }
         Set<Integer> toreturn = new HashSet<Integer>();
         for (int node : toget) {
-            if (nodes.get(node).label == label) {
+            if (nodeMap.nodes.get(node).label == label) {
                 toreturn.add(node);
             }
         }
@@ -197,7 +202,7 @@ public class NodeMotif {
     /*
 	 * update Nov 10,2014, it could not be returning a set, needs to be a list
 	 */
-//	private ArrayList<Integer> get2hop(HashMap<Integer, NodeMotif> nodes, int t0, int t1){
+//	private ArrayList<Integer> get2hop(NodeMotifHashMap nodeMap, int t0, int t1){
 //		ArrayList<Integer> hop2 = new ArrayList<Integer>();
 //		Set<Integer> hop1 = this.getNei(t0);
 //		for(int nei1 : hop1){
@@ -215,13 +220,13 @@ public class NodeMotif {
 	/*
 	 * update Nov 10,2014, it could not be returning a set, needs to be a list
 	 */
-    private ArrayList<Integer> get2hop(HashMap<Integer, NodeMotif> nodes, int t0, int t1, int label0, int label1) {
+    private ArrayList<Integer> get2hop(NodeMotifHashMap nodeMap, int t0, int t1, int label0, int label1) {
         ArrayList<Integer> hop2 = new ArrayList<Integer>();
-        Set<Integer> hop1 = this.getNei(t0, label0, nodes);
+        Set<Integer> hop1 = this.getNei(t0, label0, nodeMap);
         for (int nei1 : hop1) {
-            for (int nei2 : nodes.get(nei1).getNei(t1, label1, nodes))
+            for (int nei2 : nodeMap.nodes.get(nei1).getNei(t1, label1, nodeMap))
                 if (nei2 != this.id) hop2.add(nei2);
-            //	hop2.addAll(nodes.get(nei1).getNei(t1, label1, nodes));
+            //	hop2.addAll(nodeMap.nodes.get(nei1).getNei(t1, label1, nodeMap));
         }
 //		Set<Integer> temp = new HashSet<Integer>();
 //		temp.add(this.id);
@@ -232,7 +237,7 @@ public class NodeMotif {
     // helper function to count isolated nodes.
     //  i.e. how many nodes only has you alone as friend of any type
     //       and the node itself has to have only one friend too
-//	private int countISO(HashMap<Integer, NodeMotif> nodes, int t0){
+//	private int countISO(NodeMotifHashMap nodeMap, int t0){
 //		int iso = 0;
 //		Set<Integer> friends = getNei(t0);
 //		if(friends.size() > 1){
@@ -247,7 +252,7 @@ public class NodeMotif {
 //	// helper function to count isolated nodes and satisfy given Y value.
 //	//  i.e. how many nodes only has you alone as friend of any type
 //	//       and the node itself has to have only one friend too
-//	private int countISO(HashMap<Integer, NodeMotif> nodes, int t0, int label){
+//	private int countISO(NodeMotifHashMap nodeMap, int t0, int label){
 //		int iso = 0;
 //		Set<Integer> friends = getNei(t0);
 //		if(friends.size() > 1){
@@ -258,21 +263,21 @@ public class NodeMotif {
 //		}
 //		return(iso);
 //	}
-//	
+//
     // helper function to count [new] isolated nodes and satisfy given Y value.
     //  i.e. how many nodes only has you alone as friend of any type
     //       but you could have more than one friend
-    private int countISO_new(HashMap<Integer, NodeMotif> nodes, int t0, int label) {
+    private int countISO_new(NodeMotifHashMap nodeMap, int t0, int label) {
         int iso = 0;
         Set<Integer> friends = getNei(t0);
         for (int fri : friends) {
-            if (nodes.get(fri).nList.size() == 1 & nodes.get(fri).label == label) iso++;
+            if (nodeMap.nodes.get(fri).nList.size() == 1 & nodeMap.nodes.get(fri).label == label) iso++;
         }
         return (iso);
     }
 
 //	// calculate node motifs
-//	public void motifCount(HashMap<Integer, NodeMotif> nodes){
+//	public void motifCount(NodeMotifHashMap nodeMap){
 //		// if iso by itself, return with type 0
 //		if(this.nList.size() == 0){
 //			this.motif.put(0,  1);
@@ -290,10 +295,10 @@ public class NodeMotif {
 //		ArrayList<Integer> rm = get2hop(nodes, 2,3);
 //		ArrayList<Integer> rs = get2hop(nodes, 2,1);
 //		ArrayList<Integer> rr = get2hop(nodes, 2,2);
-//		
+//
 //		//this.motif.put(33, Sets.intersection(this.mList, mm).size() / 2 );
 //		this.motif.put(33,  ListUtils.intersection(this.mlistlist, mm).size() / 2);
-//		
+//
 //		this.motif.put(32, ListUtils.intersection(this.slistlist, mm).size()     );
 //		this.motif.put(31, ListUtils.intersection(this.rlistlist, mm).size()     );
 //		this.motif.put(30, ListUtils.intersection(this.slistlist, sm).size() / 2 );
@@ -335,7 +340,7 @@ public class NodeMotif {
 //		//		if(this.motif.get(15) < 0) System.out.println(15);
 //		//		if(this.motif.get(14) < 0) System.out.println(14);
 //		//		if(this.motif.get(13) < 0) System.out.println(13);
-//		//		
+//		//
 //
 //		this.motif.put(12, ListUtils.subtract(mm, this.nlistlist).size());
 //		this.motif.put(11, ListUtils.subtract(sm, this.nlistlist).size());
@@ -354,7 +359,7 @@ public class NodeMotif {
 //	}
 
     // calculate dyad motifs
-//	public void dyadCount2(HashMap<Integer, NodeMotif> nodes){		
+//	public void dyadCount2(NodeMotifHashMap nodeMap){
 //		this.motif.put(1,  countISO(nodes, 2, 0));
 //		this.motif.put(2,  countISO(nodes, 2, 1));
 //		this.motif.put(3,  countISO(nodes, 1, 0));
@@ -364,13 +369,13 @@ public class NodeMotif {
 //	}
 
     // calculate dyad motifs with new definition
-    public void dyadCount2_new(HashMap<Integer, NodeMotif> nodes) {
-        this.motif.put(1, countISO_new(nodes, 2, 0));
-        this.motif.put(2, countISO_new(nodes, 2, 1));
-        this.motif.put(3, countISO_new(nodes, 1, 0));
-        this.motif.put(4, countISO_new(nodes, 1, 1));
-        this.motif.put(5, countISO_new(nodes, 3, 0));
-        this.motif.put(6, countISO_new(nodes, 3, 1));
+    public void dyadCount2_new(NodeMotifHashMap nodeMap) {
+        this.motif.put(1, countISO_new(nodeMap, 2, 0));
+        this.motif.put(2, countISO_new(nodeMap, 2, 1));
+        this.motif.put(3, countISO_new(nodeMap, 1, 0));
+        this.motif.put(4, countISO_new(nodeMap, 1, 1));
+        this.motif.put(5, countISO_new(nodeMap, 3, 0));
+        this.motif.put(6, countISO_new(nodeMap, 3, 1));
     }
 
     // helper function to implement list intersection with set
@@ -394,7 +399,7 @@ public class NodeMotif {
     }
 
     // calculate three-node motifs
-    public void triCount(HashMap<Integer, NodeMotif> nodes, int label0, int label1) {
+    public void triCount(NodeMotifHashMap nodeMap, int label0, int label1) {
         // this counts the "left" angle
 //		Set<Integer> mm = get2hop(nodes, 3,3, label0, label1);
 //		Set<Integer> ms = get2hop(nodes, 3,1, label0, label1);
@@ -406,15 +411,15 @@ public class NodeMotif {
 //		Set<Integer> rs = get2hop(nodes, 2,1, label0, label1);
 //		Set<Integer> rr = get2hop(nodes, 2,2, label0, label1);
 
-        ArrayList<Integer> mm = get2hop(nodes, 3, 3, label0, label1);
-        ArrayList<Integer> ms = get2hop(nodes, 3, 1, label0, label1);
-        ArrayList<Integer> mr = get2hop(nodes, 3, 2, label0, label1);
-        ArrayList<Integer> sm = get2hop(nodes, 1, 3, label0, label1);
-        ArrayList<Integer> ss = get2hop(nodes, 1, 1, label0, label1);
-        ArrayList<Integer> sr = get2hop(nodes, 1, 2, label0, label1);
-        ArrayList<Integer> rm = get2hop(nodes, 2, 3, label0, label1);
-        ArrayList<Integer> rs = get2hop(nodes, 2, 1, label0, label1);
-        ArrayList<Integer> rr = get2hop(nodes, 2, 2, label0, label1);
+        ArrayList<Integer> mm = get2hop(nodeMap, 3, 3, label0, label1);
+        ArrayList<Integer> ms = get2hop(nodeMap, 3, 1, label0, label1);
+        ArrayList<Integer> mr = get2hop(nodeMap, 3, 2, label0, label1);
+        ArrayList<Integer> sm = get2hop(nodeMap, 1, 3, label0, label1);
+        ArrayList<Integer> ss = get2hop(nodeMap, 1, 1, label0, label1);
+        ArrayList<Integer> sr = get2hop(nodeMap, 1, 2, label0, label1);
+        ArrayList<Integer> rm = get2hop(nodeMap, 2, 3, label0, label1);
+        ArrayList<Integer> rs = get2hop(nodeMap, 2, 1, label0, label1);
+        ArrayList<Integer> rr = get2hop(nodeMap, 2, 2, label0, label1);
 
         // divider for homophily graph
         int homo = 1;
@@ -424,7 +429,7 @@ public class NodeMotif {
 		/* update Nov 10, 2014, correct way to calculate intersection (with replicate)
 		 * mm is always the larger, mlistlist has no replicate
 		 *   List<Integer> test = ListUtils.subtract(mm, ListUtils.subtract(mm, this.mlistlist));
-		 * Similarly, for set difference, to keep replicate, 
+		 * Similarly, for set difference, to keep replicate,
 		 *   List<Integer> test = ListUtils.subtract(mm, ListUtils.intersection(this.mlistlist, mm));
 		 */
         this.motif.put(118 + label0 + label1, this.intersect(mm, this.mList) / homo);
@@ -455,47 +460,47 @@ public class NodeMotif {
 		/* the factor is a counter for symmetric cases
 		/* if label0 = label1 = 1, the term to be subtracter should have index (2*label0 + label1)
 		/* if (0,1) or (1,0), it should be both (label0 + label1) + (label0 + label1 + 1)
-		 * 		then to avoid using motifs not counted yet, need to count only (label0 + label1), 
+		 * 		then to avoid using motifs not counted yet, need to count only (label0 + label1),
 		 * 			and adjust the other one later.
 		 * Not also the factor is not applied to the last line of motifs, since they are also symmetric.
-		 * So we need the factor to help find the correct index.	
+		 * So we need the factor to help find the correct index.
 		 */
         int fac = label0 + label1;
         this.motif.put(61 + label0 + label1,
-                this.getNei(3, label0, nodes).size()
-                        * (this.getNei(3, label1, nodes).size() - homo + 1) / homo
+                this.getNei(3, label0, nodeMap).size()
+                        * (this.getNei(3, label1, nodeMap).size() - homo + 1) / homo
                         - this.motif.get(84 + fac * label0 + label1) - this.motif.get(118 + label0 + label1));
 
         this.motif.put(57 + 2 * label0 + label1,
-                this.getNei(3, label0, nodes).size()
-                        * this.getNei(1, label1, nodes).size()
+                this.getNei(3, label0, nodeMap).size()
+                        * this.getNei(1, label1, nodeMap).size()
                         - this.motif.get(80 + 2 * label0 + label1) - this.motif.get(96 + 2 * label0 + label1) - this.motif.get(114 + 2 * label0 + label1));
 
         this.motif.put(53 + 2 * label0 + label1,
-                this.getNei(3, label0, nodes).size()
-                        * this.getNei(2, label1, nodes).size()
+                this.getNei(3, label0, nodeMap).size()
+                        * this.getNei(2, label1, nodeMap).size()
                         - this.motif.get(76 + 2 * label0 + label1) - this.motif.get(92 + 2 * label0 + label1) - this.motif.get(110 + 2 * label0 + label1));
 
         this.motif.put(50 + label0 + label1,
-                this.getNei(1, label0, nodes).size()
-                        * (this.getNei(1, label1, nodes).size() - homo + 1) / homo
+                this.getNei(1, label0, nodeMap).size()
+                        * (this.getNei(1, label1, nodeMap).size() - homo + 1) / homo
                         - this.motif.get(72 + fac * label0 + label1) - this.motif.get(107 + label0 + label1));
 
         this.motif.put(47 + label0 + label1,
-                this.getNei(2, label0, nodes).size()
-                        * (this.getNei(2, label1, nodes).size() - homo + 1) / homo
+                this.getNei(2, label0, nodeMap).size()
+                        * (this.getNei(2, label1, nodeMap).size() - homo + 1) / homo
                         - this.motif.get(68 + fac * label0 + label1) - this.motif.get(104 + label0 + label1));
 
         this.motif.put(43 + 2 * label0 + label1,
-                this.getNei(2, label0, nodes).size()
-                        * this.getNei(1, label1, nodes).size()
+                this.getNei(2, label0, nodeMap).size()
+                        * this.getNei(1, label1, nodeMap).size()
                         - this.motif.get(64 + 2 * label0 + label1) - this.motif.get(88 + 2 * label0 + label1) - this.motif.get(100 + 2 * label0 + label1));
 
         // adjust for symmetric case when first label and second label not equal
 		/* i.e. for type 62, counting 0 <-> A <-> 1
 		 *  it should be |A<->0| * |A<->1| - type 85 - type 86 - type 119
 		 *  the calculation above only subtracts type 85 and type 119
-		 *  
+		 *
 		 *  since only the second time (0, 1) or (1, 0) is called that we know how to adjust
 		 */
 
@@ -519,9 +524,9 @@ public class NodeMotif {
 
     /**
      * calculate motifs with label
-     * @param nodes HashMap of all the NodeMotifs
+     * @param nodeMap HashMap of all the NodeMotifs
      */
-    public void motifCount_wlabel(HashMap<Integer, NodeMotif> nodes) {
+    public void motifCount_wlabel(NodeMotifHashMap nodeMap) {
         // if iso by itself, return with type 0
         if (this.nList.size() == 0) {
             this.motif.put(0, 1);
@@ -533,38 +538,39 @@ public class NodeMotif {
             this.motif.put(0, 0);
         }
         // count dyad
-        this.dyadCount2_new(nodes);
+        this.dyadCount2_new(nodeMap);
 
 		/*
 		 * NOTE: the order to call (0,1) and (1,0) should not be changed!
 		 */
-        this.triCount(nodes, 0, 0);
-        this.triCount(nodes, 0, 1);
-        this.triCount(nodes, 1, 0);
-        this.triCount(nodes, 1, 1);
+        this.triCount(nodeMap, 0, 0);
+        this.triCount(nodeMap, 0, 1);
+        this.triCount(nodeMap, 1, 0);
+        this.triCount(nodeMap, 1, 1);
     }
 
     public void printTo(BufferedWriter sc, int nvar) throws IOException {
         StringBuilder sb = new StringBuilder();
-        sb.append(this.y);
-        sb.append(",");
-        sb.append(this.t);
-        sb.append(",");
+        sb.append(this.y)
+        .append(",")
+        .append(this.t)
+        .append(",");
+
         for (int i = 0; i < nvar - 1; i++) {
-            sb.append(this.motif.get(i));
-            sb.append(",");
+            sb.append(this.motif.get(i))
+            .append(",");
         }
         sb.append(this.motif.get(nvar - 1));
 
         // add columns to check outlier is indeed removed
         sb.append(",");
-        sb.append(this.inFreq + ",");
-        sb.append(this.outFreq + ",");
-        sb.append(this.sList.size() + ",");
-        sb.append(this.rList.size() + ",");
-        sb.append(this.mList.size() + ",");
-        sb.append(this.nList.size());
-        sb.append("\n");
+        sb.append(this.inFreq + ",")
+        .append(this.outFreq + ",")
+        .append(this.sList.size() + ",")
+        .append(this.rList.size() + ",")
+        .append(this.mList.size() + ",")
+        .append(this.nList.size())
+        .append("\n");
         sc.write(sb.toString());
     }
 

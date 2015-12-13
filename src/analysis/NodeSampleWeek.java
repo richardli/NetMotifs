@@ -2,6 +2,8 @@ package analysis;
 
 import com.google.common.collect.Sets;
 import data.NodeMotif;
+import data.NodeMotifHashMap;
+import data.NodeMotifwithNeighbour;
 import util.VectorUtil;
 
 import java.io.*;
@@ -37,7 +39,7 @@ public class NodeSampleWeek {
     // a set of integers as sample
     public HashSet<Integer> sample = new HashSet<Integer>();
     // HashMap of NodeMotifs
-    public HashMap<Integer, NodeMotif> allMotif = new HashMap<Integer, NodeMotif>();
+    public NodeMotifHashMap allMotif = new NodeMotifHashMap();
 
 
     // initialize with MM file
@@ -111,11 +113,11 @@ public class NodeSampleWeek {
                 if (this.dict.get(s) == null) {
                     this.dict.put(s, nextindex);
                     if (time < startTime) {
-                        this.allMotif.put(nextindex, new NodeMotif(nextindex, time, -1, 1));
+                        this.allMotif.nodes.put(nextindex, new NodeMotifwithNeighbour(nextindex, time, -1, 1));
                     } else if (time < midTime) {
-                        this.allMotif.put(nextindex, new NodeMotif(nextindex, time, -1, 1));
+                        this.allMotif.nodes.put(nextindex, new NodeMotifwithNeighbour(nextindex, time, -1, 1));
                     } else {
-                        this.allMotif.put(nextindex, new NodeMotif(nextindex, time, 1, 0));
+                        this.allMotif.nodes.put(nextindex, new NodeMotifwithNeighbour(nextindex, time, 1, 0));
                     }
                     nextindex++;
                 } else {
@@ -123,21 +125,21 @@ public class NodeSampleWeek {
                     int index = this.dict.get(s);
 
                     if (time < startTime) {
-                        this.allMotif.get(index).y = -1;
-                        this.allMotif.get(index).label = 1;
+                        this.allMotif.nodes.get(index).y = -1;
+                        this.allMotif.nodes.get(index).label = 1;
 
                      } else if (time < midTime) {
-                        this.allMotif.get(index).y = -1;
-                        this.allMotif.get(index).label = 1;
+                        this.allMotif.nodes.get(index).y = -1;
+                        this.allMotif.nodes.get(index).label = 1;
 
                        // extra case when streaming:
                        // if this node signed up before this period, but no transfer sent in first week
-                     } else if (this.allMotif.get(index).y == 1 & this.allMotif.get(index).t < midTime){
-                        this.allMotif.get(index).label = 1;
-                        this.allMotif.get(index).y = -1;
+                     } else if (this.allMotif.nodes.get(index).y == 1 & this.allMotif.nodes.get(index).t < midTime){
+                        this.allMotif.nodes.get(index).label = 1;
+                        this.allMotif.nodes.get(index).y = -1;
                      } else{
-                        this.allMotif.get(index).label = 0;
-                        this.allMotif.get(index).y = 1;
+                        this.allMotif.nodes.get(index).label = 0;
+                        this.allMotif.nodes.get(index).y = 1;
                     }
 
                 }
@@ -205,8 +207,8 @@ public class NodeSampleWeek {
                     // update neighborhood
                     int sid = this.dict.get(s);
                     int rid = this.dict.get(r);
-                    this.allMotif.get(sid).sendto(rid);
-                    this.allMotif.get(rid).recfrom(sid);
+                    this.allMotif.nodes.get(sid).sendto(rid);
+                    this.allMotif.nodes.get(rid).recfrom(sid);
                     
                     // print a dot for each new day
                     if (time - counter > 24) {
@@ -225,11 +227,11 @@ public class NodeSampleWeek {
         //			while(iter2.hasNext()){
         //				Map.Entry<Long,Integer> entry = iter2.next();
         //				int id = entry.getValue();
-        //				NodeMotif temp = this.allMotif.get(id);
+        //				NodeMotif temp = this.allMotif.nodes.get(id);
         //				temp.thinFreq(threa);
         //				if(temp.sList.size() + temp.rList.size() == 0){
         //					iter2.remove();
-        //					this.allMotif.remove(id);
+        //					this.allMotif.nodes.remove(id);
         //					countremove ++;
         //					continue;
         //				}
@@ -317,24 +319,24 @@ public class NodeSampleWeek {
 
                     if (this.dict.get(s) == null) {
                         this.dict.put(s, nextindex);
-                        this.allMotif.put(nextindex, new NodeMotif(nextindex));
+                        this.allMotif.nodes.put(nextindex, new NodeMotifwithNeighbour(nextindex));
                         nextindex++;
                     }
                     if (this.dict.get(r) == null) {
                         this.dict.put(r, nextindex);
-                        this.allMotif.put(nextindex, new NodeMotif(nextindex));
+                        this.allMotif.nodes.put(nextindex, new NodeMotifwithNeighbour(nextindex));
                         nextindex++;
                     }
                     int sid = this.dict.get(s);
                     int rid = this.dict.get(r);
 
                     // update neighbors
-                    this.allMotif.get(sid).sendto(rid);
-                    this.allMotif.get(rid).recfrom(sid);
+                    this.allMotif.nodes.get(sid).sendto(rid);
+                    this.allMotif.nodes.get(rid).recfrom(sid);
 
                     // update degree counts (frequency)
-                    this.allMotif.get(sid).outFreq++;
-                    this.allMotif.get(rid).inFreq++;
+                    this.allMotif.nodes.get(sid).outFreq++;
+                    this.allMotif.nodes.get(rid).inFreq++;
                     // print a dot for each new day
                     if (time - counter > 24) {
                         System.out.printf(".");
@@ -353,30 +355,30 @@ public class NodeSampleWeek {
         ArrayList<Integer> outfreqs = new ArrayList<Integer>();
         ArrayList<Integer> allfreqs = new ArrayList<Integer>();
 
-        for (int node : this.allMotif.keySet()) {
-            if (this.allMotif.get(node) == null) {
+        for (int node : this.allMotif.nodes.keySet()) {
+            if (this.allMotif.nodes.get(node) == null) {
                 System.out.println("!");
                 continue;
             }
-            // since allMotif contains ID from previous periods, might have empty motifs
-            if(this.allMotif.get(node).inFreq + this.allMotif.get(node).outFreq == 0){
+            // since allMotif.nodes contains ID from previous periods, might have empty motifs
+            if(this.allMotif.nodes.get(node).inFreq + this.allMotif.nodes.get(node).outFreq == 0){
                 continue;
             }
 
-            indegs.add(this.allMotif.get(node).rList.size());
-            outdegs.add(this.allMotif.get(node).sList.size());
-            alldegs.add(this.allMotif.get(node).nList.size());
+            indegs.add(this.allMotif.nodes.get(node).rList.size());
+            outdegs.add(this.allMotif.nodes.get(node).sList.size());
+            alldegs.add(this.allMotif.nodes.get(node).nList.size());
 
-            infreqs.add(this.allMotif.get(node).inFreq);
-            outfreqs.add(this.allMotif.get(node).outFreq);
-            allfreqs.add(this.allMotif.get(node).inFreq + this.allMotif.get(node).outFreq);
+            infreqs.add(this.allMotif.nodes.get(node).inFreq);
+            outfreqs.add(this.allMotif.nodes.get(node).outFreq);
+            allfreqs.add(this.allMotif.nodes.get(node).inFreq + this.allMotif.nodes.get(node).outFreq);
 
             // test
-//            System.out.println(this.allMotif.get(node).rList.size() + " " +
-//                                this.allMotif.get(node).sList.size()+ " " +
-//                                this.allMotif.get(node).nList.size()+ " " +
-//                                this.allMotif.get(node).inFreq+ " " +
-//                                this.allMotif.get(node).outFreq);
+//            System.out.println(this.allMotif.nodes.get(node).rList.size() + " " +
+//                                this.allMotif.nodes.get(node).sList.size()+ " " +
+//                                this.allMotif.nodes.get(node).nList.size()+ " " +
+//                                this.allMotif.nodes.get(node).inFreq+ " " +
+//                                this.allMotif.nodes.get(node).outFreq);
         }
         int indegQuantile = VectorUtil.percentile(indegs, per);
         int outdegQuantile = VectorUtil.percentile(outdegs, per);
@@ -392,15 +394,15 @@ public class NodeSampleWeek {
         while (iter.hasNext()) {
             Map.Entry<Long, Integer> entry = iter.next();
             int id = entry.getValue();
-            if (this.allMotif.get(id) == null) {
+            if (this.allMotif.nodes.get(id) == null) {
                 System.out.println("!");
                 continue;
             }
-            NodeMotif temp = this.allMotif.get(id);
+            NodeMotif temp = this.allMotif.nodes.get(id);
             // remove nodes with one-direction only communication and too large
             if (temp.inFreq + temp.outFreq > thre & temp.inFreq * temp.outFreq == 0) {
                 iter.remove();
-                this.allMotif.remove(id);
+                this.allMotif.nodes.remove(id);
                 countRemove++;
                 continue;
             }
@@ -412,7 +414,7 @@ public class NodeSampleWeek {
                     | temp.sList.size() > outdegQuantile
                     | temp.nList.size() > alldegQuantile) {
                 iter.remove();
-                this.allMotif.remove(id);
+                this.allMotif.nodes.remove(id);
                 countRemove++;
                 continue;
             }
@@ -420,13 +422,13 @@ public class NodeSampleWeek {
             temp.thinFreq(hardThre);
             if (temp.sList.size() + temp.rList.size() == 0) {
                 iter.remove();
-                this.allMotif.remove(id);
+                this.allMotif.nodes.remove(id);
                 countRemove++;
                 continue;
             }
 
             // rest nodes, remove all neighbour lists (since some of the nodes will be removed)
-            this.allMotif.get(id).reset();
+            this.allMotif.nodes.get(id).reset();
 
         }
         System.out.println("Freq: " + infreqQuantile + " " + outfreqQuantile + " " + allfreqQuantile);
@@ -445,10 +447,10 @@ public class NodeSampleWeek {
         //        // second layer of filter
         //        double threFreq = 0.0;
         //        ArrayList<Integer> tempFreq = new ArrayList<Integer>();
-        //        for (int node : this.allMotif.keySet()) {
-        //            if (this.allMotif.get(node).nListFreq != null) {
-        //                for (int i : this.allMotif.get(node).nListFreq.keySet()) {
-        //                    tempFreq.add(this.allMotif.get(node).nListFreq.get(i));
+        //        for (int node : this.allMotif.nodes.keySet()) {
+        //            if (this.allMotif.nodes.get(node).nListFreq != null) {
+        //                for (int i : this.allMotif.nodes.get(node).nListFreq.keySet()) {
+        //                    tempFreq.add(this.allMotif.nodes.get(node).nListFreq.get(i));
         //                }
         //            }
         //        }
@@ -467,19 +469,19 @@ public class NodeSampleWeek {
         //        countRemove = 0;
         //        while (iter2.hasNext()) {
         //            int id = iter2.next().getValue();
-        //            if (this.allMotif.get(id) == null) {
+        //            if (this.allMotif.nodes.get(id) == null) {
         //                System.out.println("!");
         //                continue;
         //            }
-        //            NodeMotif temp = this.allMotif.get(id);
+        //            NodeMotif temp = this.allMotif.nodes.get(id);
         //            temp.thinFreq(hardThre);
         //            if (temp.sList.size() + temp.rList.size() == 0) {
         //                iter2.remove();
-        //                this.allMotif.remove(id);
+        //                this.allMotif.nodes.remove(id);
         //                countRemove++;
         //                continue;
         //            }
-        //            this.allMotif.get(id).reset();
+        //            this.allMotif.nodes.get(id).reset();
         //        }
         //        System.out.println("Finished deleting outlier from thinning edges, deleted:    " + countRemove);
     }
@@ -498,8 +500,8 @@ public class NodeSampleWeek {
         if (y == Integer.MAX_VALUE) {
             population.addAll(this.dict.values());
         } else {
-            for (int i : this.allMotif.keySet()) {
-                if (allMotif.get(i).y == y) population.add(i);
+            for (int i : this.allMotif.nodes.keySet()) {
+                if (allMotif.nodes.get(i).y == y) population.add(i);
             }
         }
 
@@ -515,14 +517,14 @@ public class NodeSampleWeek {
         if (indep) {
             for (int i : population) {
                 if (nodes_appeared.contains(i) |
-                        Sets.intersection(nodes_appeared, this.allMotif.get(i).sList).size() > 0 |
-                        Sets.intersection(nodes_appeared, this.allMotif.get(i).rList).size() > 0) {
+                        Sets.intersection(nodes_appeared, this.allMotif.nodes.get(i).sList).size() > 0 |
+                        Sets.intersection(nodes_appeared, this.allMotif.nodes.get(i).rList).size() > 0) {
                     continue;
                 } else {
                     orderlist.add(i);
                     nodes_appeared.add(i);
-                    nodes_appeared.addAll(this.allMotif.get(i).rList);
-                    nodes_appeared.addAll(this.allMotif.get(i).sList);
+                    nodes_appeared.addAll(this.allMotif.nodes.get(i).rList);
+                    nodes_appeared.addAll(this.allMotif.nodes.get(i).sList);
                 }
             }
         } else {
@@ -553,16 +555,16 @@ public class NodeSampleWeek {
 //						fulldata.readPhone(phonefile, Integer.MAX_VALUE, "080101");
 //						fulldata.sampleNode(Integer.MAX_VALUE, 0);
 //						
-//						for(int i : fulldata.allMotif.keySet()){
-//							fulldata.allMotif.get(i).organize();
+//						for(int i : fulldata.allMotif.nodes.keySet()){
+//							fulldata.allMotif.nodes.get(i).organize();
 //						}
 //						
 //						for(int i : fulldata.sample){		
-//							fulldata.allMotif.get(i).motifCount_wlabel(fulldata.allMotif);
-//							System.out.println(fulldata.allMotif.get(i).id);
-//							System.out.println(fulldata.allMotif.get(i).label);
-//							System.out.println(fulldata.allMotif.get(i).y);
-//							System.out.println(fulldata.allMotif.get(i).motif.toString());
+//							fulldata.allMotif.nodes.get(i).motifCount_wlabel(fulldata.allMotif.nodes);
+//							System.out.println(fulldata.allMotif.nodes.get(i).id);
+//							System.out.println(fulldata.allMotif.nodes.get(i).label);
+//							System.out.println(fulldata.allMotif.nodes.get(i).y);
+//							System.out.println(fulldata.allMotif.nodes.get(i).motif.toString());
 //						}
 
 
@@ -647,17 +649,17 @@ public class NodeSampleWeek {
             //     fullData.sampleNode(Integer.MAX_VALUE, 0, indep);
 
             // get all the data organized. Note this is necessary as those not in the sample could be reached by friendship map
-            for (int j : fullData.allMotif.keySet()) {
-                fullData.allMotif.get(j).organize();
+            for (int j : fullData.allMotif.nodes.keySet()) {
+                fullData.allMotif.nodes.get(j).organize();
             }
 
             // count motifs
             int tempCount = 0;
             for (int j : fullData.sample) {
-                if (fullData.allMotif.get(j) == null) {
+                if (fullData.allMotif.nodes.get(j) == null) {
                     continue;
                 }
-                fullData.allMotif.get(j).motifCount_wlabel(fullData.allMotif);
+                fullData.allMotif.nodes.get(j).motifCount_wlabel(fullData.allMotif);
                 tempCount++;
                 if (tempCount % 10000 == 0) System.out.printf("-");
 
@@ -666,12 +668,12 @@ public class NodeSampleWeek {
             // output to file and remove motif counts
             BufferedWriter sc = new BufferedWriter(new FileWriter(output));
             for (int j : fullData.sample) {
-                if (fullData.allMotif.get(j) == null) {
+                if (fullData.allMotif.nodes.get(j) == null) {
                     continue;
                 }
-                fullData.allMotif.get(j).printTo(sc, 121);
-                // wipe out fulldata.allMotif
-                fullData.allMotif.get(j).swipe();
+                fullData.allMotif.nodes.get(j).printTo(sc, 121);
+                // wipe out fulldata.allMotif.nodes
+                fullData.allMotif.nodes.get(j).swipe();
             }
             sc.close();
 
