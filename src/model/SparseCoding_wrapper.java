@@ -30,6 +30,9 @@ public class SparseCoding_wrapper {
         String motifFile = "../data/motif_counts/clean_motifs_" + args[9] + ".txt";
         String dictFile = "../data/motif_counts/clean_dict_" + args[10] + ".txt";
         String saveFile = "../data/motif_counts/run_alpha_" + args[11] + ".txt";
+//          String motifFile = "../data/FluMotifWithNeighbour.txt";
+//          String dictFile = "../data/dict0.txt";
+//          String saveFile = "../data/FluMotifWithNeighbour_alpha.txt";
 
         BufferedReader mbr = new BufferedReader(new FileReader(motifFile));
         BufferedReader dbr = new BufferedReader(new FileReader(dictFile));
