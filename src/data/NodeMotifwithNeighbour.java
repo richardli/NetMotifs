@@ -40,7 +40,11 @@ public class NodeMotifwithNeighbour extends NodeMotif{
             for(int sender : this.rList){
                 HashMap<Integer, Integer> neiMotif = nodeMap.nodes.get(sender).motif;
                 for(int i = 0; i < 121; i++){
-                    this.motif_from_in.put(i, (int) tildeLand(this.motif_from_in.get(i), neiMotif.get(i)));
+                    if(this.motif_from_in.get(i) == null){
+                        this.motif_from_in.put(i, (int) tildeLand(0, neiMotif.get(i)));
+                    }else{
+                        this.motif_from_in.put(i, (int) tildeLand(this.motif_from_in.get(i), neiMotif.get(i)));
+                    }
                 }
             }
         }
@@ -54,7 +58,11 @@ public class NodeMotifwithNeighbour extends NodeMotif{
             for(int receiver : this.sList){
                 HashMap<Integer, Integer> neiMotif = nodeMap.nodes.get(receiver).motif;
                 for(int i = 0; i < 121; i++){
-                    this.motif_from_out.put(i, (int) tildeLand(this.motif_from_out.get(i), neiMotif.get(i)));
+                    if(this.motif_from_out.get(i) == null){
+                        this.motif_from_out.put(i, (int) tildeLand(0, neiMotif.get(i)));
+                    }else{
+                        this.motif_from_out.put(i, (int) tildeLand(this.motif_from_out.get(i), neiMotif.get(i)));
+                    }
                 }
             }
         }
@@ -68,7 +76,11 @@ public class NodeMotifwithNeighbour extends NodeMotif{
             for (int friend : this.mList) {
                 HashMap<Integer, Integer> neiMotif = nodeMap.nodes.get(friend).motif;
                 for (int i = 0; i < 121; i++) {
-                    this.motif_from_mut.put(i, (int) tildeLand(this.motif_from_mut.get(i), neiMotif.get(i)));
+                    if(this.motif_from_mut.get(i) == null){
+                        this.motif_from_mut.put(i, (int) tildeLand(0, neiMotif.get(i)));
+                    }else{
+                        this.motif_from_mut.put(i, (int) tildeLand(this.motif_from_mut.get(i), neiMotif.get(i)));
+                    }
                 }
             }
         }
