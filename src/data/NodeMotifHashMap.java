@@ -6,5 +6,5 @@ import java.util.HashMap;
  * Created by zehangli on 12/13/15.
  */
 public class NodeMotifHashMap {
-    public HashMap<Integer, NodeMotifwithNeighbour> nodes;
+    public HashMap<Integer, NodeMotifwithNeighbour> nodes = new HashMap<Integer, NodeMotifwithNeighbour>();
 }
