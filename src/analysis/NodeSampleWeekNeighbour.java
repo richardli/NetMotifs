@@ -18,7 +18,6 @@ public class NodeSampleWeekNeighbour extends NodeSampleWeek {
     /*
      * extends the motif counting class to also return neighbour motif sums
      */
-    public NodeMotifHashMap allMotif = new NodeMotifHashMap();
 
     public static void main(String[] args) throws IOException, ParseException {
 
@@ -52,9 +51,9 @@ public class NodeSampleWeekNeighbour extends NodeSampleWeek {
         String mmfile = "/data/rwanda_anon/CDR/me2u.ANON-new.all.txt";
         // specify date to avoid changing too much
         String fileDates[] = new String[2];
-        fileDates[0] = "0705";  // 0705, 0805, 0809
-        fileDates[1] = "0706";  // 0706, 0806, 0810
-        String endDate = "0707"; //  0707, 0807, 0811
+        fileDates[0] = "0809";  // 0705, 0805, 0809
+        fileDates[1] = "0810";  // 0706, 0806, 0810
+        String endDate = "0811"; //  0707, 0807, 0811
 
         String phonefile[] = new String[2];
         phonefile[0] = "/data/rwanda_anon/CDR/" + fileDates[0] + "-Call.pai.sordate.txt";
@@ -63,10 +62,8 @@ public class NodeSampleWeekNeighbour extends NodeSampleWeek {
 
         // specify file header to output
         String outputHeader = "/data/rwanda_anon/richardli/MotifwithNeighbour/" + fileDates[0] + "week";
-        String outputHeaderIn = "/data/rwanda_anon/richardli/MotifwithNeighbour/" + fileDates[0] + "NeighbourIn_week";
-        String outputHeaderOut = "/data/rwanda_anon/richardli/MotifwithNeighbour/" + fileDates[0] + "NeighbourOut_week";
-        String outputHeaderMut = "/data/rwanda_anon/richardli/MotifwithNeighbour/" + fileDates[0] +
-                "NeighbourMutual_week";
+        String outputHeaderYes = "/data/rwanda_anon/richardli/MotifwithNeighbour/" + fileDates[0] + "Yes_week";
+        String outputHeaderNo = "/data/rwanda_anon/richardli/MotifwithNeighbour/" + fileDates[0] + "No_week";
 
         // parse start and end time
         SimpleDateFormat format = new SimpleDateFormat("yyMMdd|HH:mm:ss");
@@ -90,10 +87,24 @@ public class NodeSampleWeekNeighbour extends NodeSampleWeek {
         for (int i = 0; i < nPeriod; i++) {
 
             String output = outputHeader + i + ".txt";
-            String outputIn = outputHeaderIn + i + ".txt";
-            String outputOut = outputHeaderOut + i + ".txt";
-            String outputMut = outputHeaderMut + i + ".txt";
-
+            String outputYes = outputHeaderYes + i + ".txt";
+            String outputNo = outputHeaderNo + i + ".txt";
+            /**
+             * put sender information into dictionary
+             *
+             *  ------------------ | phoneStart| ------------ | phoneEnd | ----------------- | MMEnd |
+             *      Y = -1                         Y = -1                   Y = 1
+             *    label = 1                        label = 1                 label = 0
+             *
+             * First Pass: (streamMM)
+             * ---------------- Check MM status  ----------------- | ------ Check Signup -------- |
+             * Second Pass: (checkOutlier)
+             *                          |---- Remove outliers ---- |
+             * Second Pass: (streamPhone)
+             *                          |---- Gather Graph ------- |
+             *                                              count motif_test
+             *
+             **/
             // define phoneEnd as the time when we consider as future MM sign-up
             // define MMEnd as the max time in the future we are looking at
 
@@ -136,63 +147,66 @@ public class NodeSampleWeekNeighbour extends NodeSampleWeek {
             //     fullData.sampleNode(Integer.MAX_VALUE, 0, indep);
 
             // get all the data organized. Note this is necessary as those not in the sample could be reached by friendship map
+//            System.out.println(fullData.allMotif.nodes.keySet().size());
+//            System.out.println(fullData.dict.values().size());
+
             for (int j : fullData.allMotif.nodes.keySet()) {
                 fullData.allMotif.nodes.get(j).organize();
             }
 
-            // count motifs
+            // count motifs for each node themselves
+            // without sample, output all nodes
+            System.out.println("Start counting motif for each node");
             int tempCount = 0;
-            for (int j : fullData.sample) {
+            for (int j : fullData.dict.values()) {
+                if (fullData.allMotif.nodes.get(j) == null) {
+                    continue;
+                }
+                fullData.allMotif.nodes.get(j).motifCount_wlabel(fullData.allMotif);
+                tempCount++;
+                if (tempCount % 10000 == 0) System.out.printf("-");
+            }
+            System.out.println("Start counting neighbour motif for each node");
+            tempCount = 0;
+            for (int j : fullData.dict.values()) {
                 if (fullData.allMotif.nodes.get(j) == null) {
                     continue;
                 }
                 fullData.allMotif.nodes.get(j).motifCount_neighbour(fullData.allMotif);
                 tempCount++;
                 if (tempCount % 10000 == 0) System.out.printf("-");
-
             }
 
             // output to file
             BufferedWriter sc = new BufferedWriter(new FileWriter(output));
-            for (int j : fullData.sample) {
+            for (int j : fullData.dict.values()) {
                 if (fullData.allMotif.nodes.get(j) == null) {
                     continue;
                 }
-                fullData.allMotif.nodes.get(j).printTo(sc, 121, 1);
+                fullData.allMotif.nodes.get(j).printTo(sc, 121, -1);
             }
             sc.close();
 
             // output to file
-            BufferedWriter sc1 = new BufferedWriter(new FileWriter(outputIn));
-            for (int j : fullData.sample) {
+            BufferedWriter sc1 = new BufferedWriter(new FileWriter(outputYes));
+            for (int j : fullData.dict.values()) {
                 if (fullData.allMotif.nodes.get(j) == null) {
                     continue;
                 }
-                fullData.allMotif.nodes.get(j).printTo(sc1, 121, 2);
+                fullData.allMotif.nodes.get(j).printTo(sc1, 121, 1);
             }
             sc1.close();
 
             // output to file
-            BufferedWriter sc2 = new BufferedWriter(new FileWriter(outputOut));
-            for (int j : fullData.sample) {
+            BufferedWriter sc2 = new BufferedWriter(new FileWriter(outputNo));
+            for (int j : fullData.dict.values()) {
                 if (fullData.allMotif.nodes.get(j) == null) {
                     continue;
                 }
-                fullData.allMotif.nodes.get(j).printTo(sc2, 121, 3);
+                fullData.allMotif.nodes.get(j).printTo(sc2, 121, 0);
             }
             sc2.close();
-
-            // output to file and remove motif counts
-            BufferedWriter sc3 = new BufferedWriter(new FileWriter(outputMut));
-            for (int j : fullData.sample) {
-                if (fullData.allMotif.nodes.get(j) == null) {
-                    continue;
-                }
-                fullData.allMotif.nodes.get(j).printTo(sc3, 121, 4);
-                // wipe out fulldata.allMotif
-                fullData.allMotif.nodes.get(j).swipe();
-            }
-            sc3.close();
+            
 
         }
     }

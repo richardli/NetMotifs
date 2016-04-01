@@ -79,17 +79,29 @@ public class NodeSamplePlainData{
 
         fullData.readMM(outcomefile);
         fullData.readPhone(edgelist);
+
         for (int j : fullData.allMotif.nodes.keySet()) {
             fullData.allMotif.nodes.get(j).organize();
         }
 
         // count motifs
+        System.out.println("Start counting motif for each node");
         int tempCount = 0;
         for (int j : fullData.dict.values()) {
             if (fullData.allMotif.nodes.get(j) == null) {
                 continue;
             }
             fullData.allMotif.nodes.get(j).motifCount_wlabel(fullData.allMotif);
+            tempCount++;
+            if (tempCount % 10000 == 0) System.out.printf("-");
+        }
+        System.out.println("Start counting neighbour motif for each node");
+        tempCount = 0;
+        for (int j : fullData.dict.values()) {
+            if (fullData.allMotif.nodes.get(j) == null) {
+                continue;
+            }
+            fullData.allMotif.nodes.get(j).motifCount_neighbour(fullData.allMotif);
             tempCount++;
             if (tempCount % 10000 == 0) System.out.printf("-");
         }

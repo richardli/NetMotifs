@@ -34,6 +34,20 @@ public class GlobalHelper {
     }
 
     /**
+     * helper function to parse time
+     *
+     * @param timeString: string in the format of "060101|00:00:00"
+     * @return
+     * @throws ParseException
+     */
+    public static double parseTime(String timeString) throws ParseException {
+        SimpleDateFormat format = new SimpleDateFormat("yyMMdd|HH:mm:ss");
+        long time0 = format.parse("060101|00:00:00").getTime();
+        long timenow = format.parse(timeString).getTime();
+        return ((double) ((timenow - time0) / 1000 / (3600)));
+    }
+
+    /**
      * helper function to parse date
      *
      * @param date : string in the format of "060101"

@@ -1,9 +1,7 @@
 package analysis;
 
 import com.google.common.collect.Sets;
-import data.NodeMotif;
-import data.NodeMotifHashMap;
-import data.NodeMotifwithNeighbour;
+import data.*;
 import util.VectorUtil;
 
 import java.io.*;
@@ -32,6 +30,7 @@ import java.util.*;
  */
 
 public class NodeSampleWeek {
+
     // dictionary of IDs
     public HashMap<Long, Integer> dict = new HashMap<Long, Integer>();
     // initialize size of nodes
@@ -39,6 +38,7 @@ public class NodeSampleWeek {
     // a set of integers as sample
     public HashSet<Integer> sample = new HashSet<Integer>();
     // HashMap of NodeMotifs
+//    public NodeMotifHashMap allMotif = new NodeMotifHashMap();
     public NodeMotifHashMap allMotif = new NodeMotifHashMap();
 
 
@@ -103,6 +103,19 @@ public class NodeSampleWeek {
 
                 /**
                  * put sender information into dictionary
+                 *
+                 *  ------------------ |start time| ------------ |mid time| ----------------- |max time|
+                 *      Y = -1                         Y = -1                   Y = 1
+                 *    label = 1                        label = 1                 label = 0
+                 *
+                 * DO THIS:
+                 *                          |---- Gather Graph ------|                        Gather Y
+                 *                                              count motif_test              predict Y
+                 *
+                 * Use the Previous Week file as training:
+                 *  | -- Gather Graph (train) --|                  Gather Y
+                 *
+                 *
                  * Y     : the outcome going into regression
                  * label : MM user or not (currently the same as Y)
                  *      sign up before startTime: Y = -1, label = 1
@@ -113,16 +126,20 @@ public class NodeSampleWeek {
                 if (this.dict.get(s) == null) {
                     this.dict.put(s, nextindex);
                     if (time < startTime) {
-                        this.allMotif.nodes.put(nextindex, new NodeMotifwithNeighbour(nextindex, time, -1, 1));
+//                        this.allMotif.nodes.put(nextindex, new NodeMotifwithNeighbour(nextindex, time, -1, 1));
+                        this.allMotif.nodes.put(nextindex, new NodeMotifwithColorNeighbour(nextindex, time, -1, 1));
                     } else if (time < midTime) {
-                        this.allMotif.nodes.put(nextindex, new NodeMotifwithNeighbour(nextindex, time, -1, 1));
+//                        this.allMotif.nodes.put(nextindex, new NodeMotifwithNeighbour(nextindex, time, -1, 1));
+                        this.allMotif.nodes.put(nextindex, new NodeMotifwithColorNeighbour(nextindex, time, -1, 1));
                     } else {
-                        this.allMotif.nodes.put(nextindex, new NodeMotifwithNeighbour(nextindex, time, 1, 0));
+//                        this.allMotif.nodes.put(nextindex, new NodeMotifwithNeighbour(nextindex, time, 1, 0));
+                        this.allMotif.nodes.put(nextindex, new NodeMotifwithColorNeighbour(nextindex, time, 1, 0));
                     }
                     nextindex++;
                 } else {
                     // if node already in the file, update label and y
                     int index = this.dict.get(s);
+                    if(this.allMotif.nodes.get(index) == null ) continue;
 
                     if (time < startTime) {
                         this.allMotif.nodes.get(index).y = -1;
@@ -173,8 +190,8 @@ public class NodeSampleWeek {
         double time;
         double counter = Double.MIN_VALUE;
         String line;
-        System.out.println("Read phone from " + mmStart + "to" + maxDate);
-        
+        System.out.println("Read phone from " + mmStart + " to " + maxDate);
+
         // loop through files until end of time period is reached
         for (int i = 0; i < files.length; i++) {
             BufferedReader br = new BufferedReader(new FileReader(files[i]));
@@ -219,6 +236,8 @@ public class NodeSampleWeek {
             }
             br.close();
         }
+
+
         return;
 
         //	comment out for now, not sure what is going on here...
@@ -319,21 +338,26 @@ public class NodeSampleWeek {
 
                     if (this.dict.get(s) == null) {
                         this.dict.put(s, nextindex);
-                        this.allMotif.nodes.put(nextindex, new NodeMotifwithNeighbour(nextindex));
+//                        this.allMotif.nodes.put(nextindex, new NodeMotifwithNeighbour(nextindex));
+                        this.allMotif.nodes.put(nextindex, new NodeMotifwithColorNeighbour(nextindex));
                         nextindex++;
                     }
                     if (this.dict.get(r) == null) {
                         this.dict.put(r, nextindex);
-                        this.allMotif.nodes.put(nextindex, new NodeMotifwithNeighbour(nextindex));
+//                        this.allMotif.nodes.put(nextindex, new NodeMotifwithNeighbour(nextindex));
+                        this.allMotif.nodes.put(nextindex, new NodeMotifwithColorNeighbour(nextindex));
                         nextindex++;
                     }
                     int sid = this.dict.get(s);
                     int rid = this.dict.get(r);
 
                     // update neighbors
-                    this.allMotif.nodes.get(sid).sendto(rid);
-                    this.allMotif.nodes.get(rid).recfrom(sid);
-
+                    try {
+                        this.allMotif.nodes.get(sid).sendto(rid);
+                        this.allMotif.nodes.get(rid).recfrom(sid);
+                    }catch (UnsupportedOperationException e){
+                        // TODO: figure out what caused this problem?
+                    }
                     // update degree counts (frequency)
                     this.allMotif.nodes.get(sid).outFreq++;
                     this.allMotif.nodes.get(rid).inFreq++;
@@ -395,7 +419,7 @@ public class NodeSampleWeek {
             Map.Entry<Long, Integer> entry = iter.next();
             int id = entry.getValue();
             if (this.allMotif.nodes.get(id) == null) {
-                System.out.println("!");
+                //System.out.println("!");
                 continue;
             }
             NodeMotif temp = this.allMotif.nodes.get(id);
@@ -603,7 +627,24 @@ public class NodeSampleWeek {
         // initialize mm file reader outside the loop
         NodeSampleWeek fullData = new NodeSampleWeek();
 
-        for (int i = 0; i < nPeriod; i++) {
+        /**
+         * put sender information into dictionary
+         *
+         *  ------------------ | phoneStart| ------------ | phoneEnd | ----------------- | MMEnd |
+         *      Y = -1                         Y = -1                   Y = 1
+         *    label = 1                        label = 1                 label = 0
+         *
+         * First Pass: (streamMM)
+         * ---------------- Check MM status  ----------------- | ------ Check Signup -------- |
+         * Second Pass: (checkOutlier)
+         *                          |---- Remove outliers ---- |
+         * Second Pass: (streamPhone)
+         *                          |---- Gather Graph ------- |
+         *                                              count motif_test
+         *
+         **/
+
+         for (int i = 0; i < nPeriod; i++) {
 
             String output =  outputHeader + i + ".txt";
 

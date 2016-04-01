@@ -602,4 +602,25 @@ public class VectorUtil {
         }
         return (y);
     }
+
+    public static double CrossProd(double[] x, double[] y){
+        double out = 0;
+        // comment out this step for speed boost...a little unsafe!!
+        // if(x.length != y.length){System.exit(1);}
+        for(int i = 0; i < x.length; i++){
+            out += x[i] * y[i];
+        }
+        return(out);
+    }
+
+    public static double CrossProd(double[] x, int[] y){
+        double out = 0;
+        // comment out this step for speed boost...a little unsafe!!
+        // if(x.length != y.length){System.exit(1);}
+        for(int i = 0; i < x.length; i++){
+            out += x[i] * y[i];
+        }
+        return(out);
+    }
+
 }
