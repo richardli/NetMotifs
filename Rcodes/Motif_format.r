@@ -184,6 +184,6 @@ gg121 <- function(glist,
 # table(Y)/length(Y)
 
 # testing plot function
-motif.matplot("../figures/MMatrix.pdf", ind = NULL)
-motif.matplot("../figures/MMatrix_test.pdf", ind = c(rep(c(1,0,-1), 40)))
+# motif.matplot("../figures/MMatrix.pdf", ind = NULL)
+# motif.matplot("../figures/MMatrix_test.pdf", ind = c(rep(c(1,0,-1), 40)))
 
