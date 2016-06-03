@@ -1,7 +1,9 @@
 package analysis;
 
 import data.NodeMotifHashMap;
+import data.NodeMotifwithColorNeighbour;
 import data.NodeMotifwithNeighbour;
+import util.MotifOrder;
 
 import java.io.*;
 import java.text.ParseException;
@@ -21,38 +23,47 @@ public class NodeSamplePlainData{
     */
     public NodeMotifHashMap allMotif = new NodeMotifHashMap();
     // dictionary of IDs
-    public HashMap<Long, Integer> dict = new HashMap<Long, Integer>();
+    public HashMap<String, Integer> dict = new HashMap<String, Integer>();
     // initialize size of nodes
     int allSize = 0;
     // a set of integers as sample
     public HashSet<Integer> sample = new HashSet<Integer>();
 
+    /**
+     *   Method to read node membership, from a file with two columns:
+     *   [id, outcome]
+     **/
     public void readMM(String file) throws IOException {
         String line;
         BufferedReader br = new BufferedReader(new FileReader(file));
         int nextindex = 0;
         while ((line = br.readLine()) != null) {
-            // each lines look like: "id outcome"
             String[] field = line.split(" ");
-            Long id = Long.parseLong(field[0]);
+            String id = field[0];
             Integer outcome = Integer.parseInt(field[1]);
+
             this.dict.put(id, nextindex);
-            NodeMotifwithNeighbour test = new NodeMotifwithNeighbour(nextindex, 12345, outcome, 0);
-            this.allMotif.nodes.put(nextindex, new NodeMotifwithNeighbour(nextindex, 12345, outcome, 0));
+            this.allMotif.nodes.put(nextindex, new NodeMotifwithColorNeighbour(id, nextindex, 12345, 1 - 2*outcome ,
+                    outcome));
             nextindex++;
         }
         br.close();
     }
+
+    /**
+     * Method read phone record without time stamp
+     * [sender ID, receiver ID]
+     **/
     public void readPhone(String file) throws IOException {
         String line;
         BufferedReader br = new BufferedReader(new FileReader(file));
         while ((line = br.readLine()) != null) {
             // each lines look like: "id outcome"
             String[] field = line.split(" ");
-            Long s = Long.parseLong(field[0]);
-            Long r = Long.parseLong(field[1]);
+            String s = field[0];
+            String r = field[1];
             if (this.dict.get(s) == null | this.dict.get(r) == null) {
-                System.out.println("error, nodes without outcome");;
+                System.out.println("error, nodes without outcome");
             }else{
                 int sid = this.dict.get(s);
                 int rid = this.dict.get(r);
@@ -62,18 +73,22 @@ public class NodeSamplePlainData{
         }
         br.close();
     }
+
+    /**
+     * Main method to count motifs
+     *
+     **/
     public static void main(String[] args) throws IOException, ParseException {
 
         // read outcome file
-        String outcomefile = "../data/flu2weekafter.txt";
-        String edgelist = "../data/call.txt";
+        String outcomefile = "/Users/zehangli/Bitbucket-repos/NetMotif/data/3motif-outcome.txt";
+        String edgelist = "/Users/zehangli/Bitbucket-repos/NetMotif//data/3motif-all.txt";
 
 
         // specify file header to output
-        String output = "../data/FluMotifWithNeighbour.txt";
-        String outputIn = "../data/FluMotifWithNeighbour_In.txt";
-        String outputOut = "../data/FluMotifWithNeighbour_Out.txt";
-        String outputMut = "../data/FluMotifWithNeighbour_Mutual.txt";
+        String output = "/Users/zehangli/Bitbucket-repos/NetMotif//data/3motif.txt";
+        String outputYes = "/Users/zehangli/Bitbucket-repos/NetMotif//data/3motif_yes.txt";
+        String outputNo = "/Users/zehangli/Bitbucket-repos/NetMotif//data/3motif_no.txt";
 
         NodeSamplePlainData fullData = new NodeSamplePlainData();
 
@@ -93,7 +108,9 @@ public class NodeSamplePlainData{
             }
             fullData.allMotif.nodes.get(j).motifCount_wlabel(fullData.allMotif);
             tempCount++;
-            if (tempCount % 10000 == 0) System.out.printf("-");
+            if (tempCount % 1000 == 0) {
+                System.out.printf("-");
+            }
         }
         System.out.println("Start counting neighbour motif for each node");
         tempCount = 0;
@@ -103,18 +120,35 @@ public class NodeSamplePlainData{
             }
             fullData.allMotif.nodes.get(j).motifCount_neighbour(fullData.allMotif);
             tempCount++;
-            if (tempCount % 10000 == 0) System.out.printf("-");
+            if (tempCount % 1000 == 0) System.out.printf("-");
         }
 
+        /**
+         * Change the order of the motifs to the final version
+         */
+
+        System.out.println("Start changing motif back to final version");
         tempCount = 0;
-        for (int j : fullData.dict.values()) {
+        for(int j : fullData.dict.values()){
             if (fullData.allMotif.nodes.get(j) == null) {
                 continue;
             }
-            fullData.allMotif.nodes.get(j).motifCount_neighbour(fullData.allMotif);
+
+//            int test = fullData.allMotif.nodes.get(j).motif.get(27);
+            MotifOrder.changeOrder2(fullData.allMotif.nodes.get(j).motif);
+//            Boolean test1 = (test == fullData.allMotif.nodes.get(j).motif.get(27));
+//            Boolean test2 = (test == fullData.allMotif.nodes.get(j).motif.get(10));
+//            if(!test1) System.out.printf("v");
+//            if(!test2) System.out.printf(test1.toString() + test2.toString() + "\n");
+            MotifOrder.changeOrderDouble2(fullData.allMotif.nodes.get(j)
+                    .motif_from_no);
+            MotifOrder.changeOrderDouble2(fullData.allMotif.nodes.get(j)
+                    .motif_from_yes);
             tempCount++;
-            if (tempCount % 10000 == 0) System.out.printf("+");
+
+            if (tempCount % 1000 == 0) System.out.printf("*");
         }
+
 
         // output to file
         BufferedWriter sc = new BufferedWriter(new FileWriter(output));
@@ -122,41 +156,29 @@ public class NodeSamplePlainData{
             if (fullData.allMotif.nodes.get(j) == null) {
                 continue;
             }
-            fullData.allMotif.nodes.get(j).printTo(sc, 121, 1);
+            fullData.allMotif.nodes.get(j).printTo(sc, 120, -1, true);
         }
         sc.close();
 
         // output to file
-        BufferedWriter sc1 = new BufferedWriter(new FileWriter(outputIn));
+        BufferedWriter sc1 = new BufferedWriter(new FileWriter(outputYes));
         for (int j : fullData.dict.values()) {
             if (fullData.allMotif.nodes.get(j) == null) {
                 continue;
             }
-            fullData.allMotif.nodes.get(j).printTo(sc1, 121, 2);
+            fullData.allMotif.nodes.get(j).printTo(sc1, 120, 1, true);
         }
         sc1.close();
 
         // output to file
-        BufferedWriter sc2 = new BufferedWriter(new FileWriter(outputOut));
+        BufferedWriter sc2 = new BufferedWriter(new FileWriter(outputNo));
         for (int j : fullData.dict.values()) {
             if (fullData.allMotif.nodes.get(j) == null) {
                 continue;
             }
-            fullData.allMotif.nodes.get(j).printTo(sc2, 121, 3);
+            fullData.allMotif.nodes.get(j).printTo(sc2, 120, 0, true);
         }
         sc2.close();
-
-        // output to file and remove motif counts
-        BufferedWriter sc3 = new BufferedWriter(new FileWriter(outputMut));
-        for (int j : fullData.dict.values()) {
-            if (fullData.allMotif.nodes.get(j) == null) {
-                continue;
-            }
-            fullData.allMotif.nodes.get(j).printTo(sc3, 121, 4);
-            // wipe out fulldata.allMotif
-            fullData.allMotif.nodes.get(j).swipe();
-        }
-        sc3.close();
 
     }
 

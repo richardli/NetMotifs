@@ -35,7 +35,8 @@ Bundle-Description: The Apache Commons Collections package contains ty
  pes that extend and augment the Java Collections Framework.
 Bundle-DocURL: http://commons.apache.org/proper/commons-collections/
 Import-Package: org.w3c.dom,
- com.google.common.collect
+ com.google.common.collect,
+ org.apache.commons.math3
 Include-Resource: META-INF/NOTICE.txt=NOTICE.txt,META-INF/LICENSE.txt=
  LICENSE.txt
 Specification-Version: 4.0

@@ -28,6 +28,28 @@ public class MapWrapper {
 		return(this.x.get(a));
 	}
 
+    // sum within range (inclusive)
+    public int getsum(int a, int b){
+        int sum = 0;
+        for(int i = a; i <= b; i++){
+            if(this.x.containsKey(i)) sum += this.x.get(i);
+        }
+        return(sum);
+    }
+
+    // return a vector within range (inclusive)
+    public int[] getVector(int a, int b){
+        int[] sum = new int[b - a + 1];
+        for(int i = a; i <= b; i++){
+            if(this.x.containsKey(i)) sum[i - a] += this.x.get(i);
+        }
+        return(sum);
+    }
+
+    public boolean containsKey(int a){
+        return(this.x.containsKey(a));
+    }
+
     /**
      * Add one to value for all elements specified by key
      * @param a list of keys

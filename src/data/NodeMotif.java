@@ -69,7 +69,7 @@ public class NodeMotif {
 
 
     public NodeMotif(){
-
+        this.swipe();
     }
 
     /** initialization with known negative outcome
@@ -528,11 +528,12 @@ public class NodeMotif {
      */
     public void motifCount_wlabel(NodeMotifHashMap nodeMap) {
         // if iso by itself, return with type 0
+        for (int i = 1; i < 121; i++) {
+            this.motif.put(i, 0);
+        }
+
         if (this.nList.size() == 0) {
             this.motif.put(0, 1);
-            for (int i = 1; i < 121; i++) {
-                this.motif.put(i, 0);
-            }
             return;
         } else {
             this.motif.put(0, 0);
