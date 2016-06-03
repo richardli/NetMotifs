@@ -1,10 +1,7 @@
 package model;
 
 import java.io.*;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Random;
+import java.util.*;
 
 import util.MathUtil;
 import util.VectorUtil;
@@ -127,38 +124,44 @@ public class PoissonModel1{
 
     public static void main(String[] args) throws IOException {
 
-        double a0 = Double.parseDouble(args[0]);
-        double b0 = Double.parseDouble(args[1]);
-        double c = Double.parseDouble(args[2]);
-        double d = Double.parseDouble(args[3]);
-        double epsilon = Double.parseDouble(args[4]);
-        double a1 = Double.parseDouble(args[5]);
-        double b1 = Double.parseDouble(args[6]);
-        int T = Integer.parseInt(args[7]);
-        int thin = Integer.parseInt(args[8]);  // not used, set to 1 for now
-        int burn = Integer.parseInt(args[9]);
-        int seed = Integer.parseInt(args[10]);
-        int M = Integer.parseInt(args[11]);
+        int counter = 0;
+        double a0 = Double.parseDouble(args[counter]); counter++;
+        double b0 = Double.parseDouble(args[counter]);counter++;
+//        double c = Double.parseDouble(args[counter]);counter++;
+//        double d = Double.parseDouble(args[counter]);counter++;
+//        double epsilon = Double.parseDouble(args[counter]);counter++;
+        double a1 = Double.parseDouble(args[counter]);counter++;
+        double b1 = Double.parseDouble(args[counter]);counter++;
+//        int T = Integer.parseInt(args[counter]);counter++;
+//        int thin = Integer.parseInt(args[counter]); counter++; // not used, set to 1 for now
+//        int burn = Integer.parseInt(args[counter]);counter++;
+        int seed = Integer.parseInt(args[counter]);counter++;
+        int M = Integer.parseInt(args[counter]);counter++;
 
-        int npar = 11;
-        String dir = args[npar + 1];
-        String motifFile = dir + args[npar + 2] + ".txt";
-        String motifFileN0 =  dir + args[npar + 3] + ".txt";
-        String motifFileN1 = dir + args[npar + 4] + ".txt";
-        String dictFile = dir + args[npar + 5] + ".txt";
-        String deltaFile = dir + args[npar + 6] + ".txt";
-        String saveFile_alpha = dir + "Jun2016/" + args[npar + 7] + "_alpha.txt";
-        String saveFile_theta = dir + "Jun2016/" + args[npar + 7] + "_theta.txt";
-        String saveFile_y = dir + "Jun2016/" + args[npar + 7] + "_y.txt";
+        String dir = args[counter];counter++;
+        String start = args[counter]; counter++;
+        String weekcount = args[counter]; counter++;
+        String motifFile = dir + start + weekcount + ".txt";
+        String motifFileN0 =  dir + start + "No_" + weekcount + ".txt";
+        String motifFileN1 = dir + start + "Yes_" + weekcount + ".txt";
+
+        String dictFile = dir + args[counter] + ".txt";counter++;
+        String deltaFile = dir + args[counter] + ".txt"; counter++;
+
+        // files to save
+        String post = args[counter]; counter++;
+        String saveFile_alpha = dir + "Jun2016/" + start + weekcount + post  + "_alpha.txt";
+        String saveFile_theta = dir + "Jun2016/" + start + weekcount + post + "_theta.txt";
+        String saveFile_y = dir + "Jun2016/" + start + weekcount + post + "_y.txt";
 //        String saveFile_metric = dir + "Jun2016/" + args[npar + 7] + "_metric.txt";
 
         boolean supervised = false;
         int maxRead = Integer.MAX_VALUE;
-        if(args.length > npar + 8){
-            supervised = Boolean.parseBoolean(args[npar + 8]);
+        if(args.length > counter){
+            supervised = Boolean.parseBoolean(args[counter]);
         }
-        if(args.length > npar + 9){
-            maxRead = Integer.parseInt(args[npar + 9]);
+        if(args.length > counter + 1){
+            maxRead = Integer.parseInt(args[counter + 1]);
         }
 
         BufferedReader mbr = new BufferedReader(new FileReader(motifFile));
@@ -181,8 +184,22 @@ public class PoissonModel1{
 
         // motif file structure: [ID, Y, time, X_1, ..., X_M]
         int count = 0;
+        // since we don't care people who are already MM user,
+        // maybe we don't have to model their counts?
+        HashSet<Integer> already_user = new HashSet<Integer>();
+
         while ((line = mbr.readLine()) != null & count < maxRead) {
             String[] field = line.split(" ");
+            int y = (int) Double.parseDouble(field[1]);
+
+            // since we don't care people who are already MM user,
+            // maybe we don't have to model their counts?
+            if(y == -1){
+                already_user.add(count);
+                count++;
+                continue;
+            }
+
             int[] motifTemp = new int[M];
             for (int i = 0; i < M; i++) {
                 motifTemp[i] = (int) Double.parseDouble(field[i + 3]);
@@ -197,7 +214,6 @@ public class PoissonModel1{
              * Y =  1  --> currently label is 0
              * **/
 
-            int y = (int) Double.parseDouble(field[1]);
             predLabelArray.add(y);
             y = y ==  1 ? 0:y;
             y = y == -1 ? 1:y;
@@ -205,9 +221,14 @@ public class PoissonModel1{
             count ++;
         }
         mbr.close();
+        System.out.printf("%d non-motif users processed\n", motifArray.size());
 
         count = 0;
         while ((line = mbrN0.readLine()) != null & count < maxRead) {
+            if(already_user.contains(count)){
+                count++;
+                continue;
+            }
             String[] field = line.split(" ");
             int[] motifTemp = new int[M];
             for (int i = 0; i < M; i++) {
@@ -217,8 +238,14 @@ public class PoissonModel1{
             count ++;
         }
         mbrN0.close();
+        System.out.printf("%d non-motif users' 0-neighbour processed\n", motifArrayN0.size());
 
+        count = 0;
         while ((line = mbrN1.readLine()) != null & count < maxRead) {
+            if(already_user.contains(count)){
+                count++;
+                continue;
+            }
             String[] field = line.split(" ");
             int[] motifTemp = new int[M];
             for (int i = 0; i < M; i++) {
@@ -228,6 +255,7 @@ public class PoissonModel1{
             count ++;
         }
         mbrN1.close();
+        System.out.printf("%d non-motif users' 1-neighbour  processed\n", motifArrayN0.size());
 
         // dict file structure: [D_i,1, ..., D_i,M]
         while ((line = dbr.readLine()) != null) {
