@@ -358,11 +358,53 @@ public class VectorUtil {
      * @param i first index
      * @param k third index
      * @param x array
+     * @param start starting index (inclusive)
+     * @param end ending index (inclusive)
+     * @return
+     */
+    public static int pick13_sum(int i, int k, int[][][] x, int start, int end) {
+        int sum = 0;
+        end = end >= x[0].length ? x[0].length - 1 : end;
+        for (int j = start; j <= end; j++) {
+            sum += x[i][j][k];
+        }
+        return (sum);
+    }
+
+    /**
+     * Sum over second dimension for given first and third index
+     *
+     * @param i first index
+     * @param k third index
+     * @param x array
      * @return
      */
     public static int pick13_sum(int i, int k, MapWrapper[][] x) {
         int sum = 0;
         for (int j = 0; j < x[0].length; j++) {
+            if (x[i][j].x.get(k) != null) {
+                sum += x[i][j].x.get(k);
+            }
+        }
+        return (sum);
+    }
+
+
+    /**
+     * Sum over second dimension for given first and third index
+     *
+     * @param i first index
+     * @param k third index
+     * @param x array
+     * @param start starting index (inclusive)
+     * @param end ending index (inclusive)
+     * @return
+     */
+    public static int pick13_sum(int i, int k, MapWrapper[][] x, int start, int end) {
+        int sum = 0;
+        end = end >= x[0].length ? x[0].length - 1 : end;
+
+        for (int j = start; j <= end ; j++) {
             if (x[i][j].x.get(k) != null) {
                 sum += x[i][j].x.get(k);
             }
