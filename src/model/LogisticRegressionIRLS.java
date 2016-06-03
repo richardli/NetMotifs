@@ -136,7 +136,7 @@ public class LogisticRegressionIRLS{
 
         if(corr){
 			 RealMatrix mH = MatrixUtils.createRealMatrix(H);
-			 RealMatrix minvH = new QRDecomposition(mH).getSolver().getInverse();
+			 RealMatrix minvH = new LUDecomposition(mH).getSolver().getInverse();
 			 //double det = new LUDecomposition(mH).getDeterminant();
 			 //System.out.println(det);
 			 invH = minvH.getData();			
@@ -180,7 +180,11 @@ public class LogisticRegressionIRLS{
 		for (int i = 0; i < this.beta.length; i++) {   
 			this.beta[i] -= delta[i+1];   //+= this.step * one[i] * (((double)label) - probPositive);   
 		}  
-	}    
+	}
+
+    public double calculateLogL(){
+        return(calculateLogL(this.prob));
+    }
 
 	public double calculateLogL(double[] probs) {	 
 		double logl = 0;
@@ -189,6 +193,7 @@ public class LogisticRegressionIRLS{
 		}
 		return logl; 
 	}
+
 
 	
 	// enter the prior tau = 1/sd^2
