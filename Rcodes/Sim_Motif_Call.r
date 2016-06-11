@@ -173,3 +173,86 @@ print(levelplot(adj.mat[[4]], col.regions=col.l, main = "1-1",colorkey = F), spl
 dev.off()
 
 write.table(adj.list.unique, file = "../data/Delta.txt", col.names = FALSE, row.names = FALSE, quote = FALSE)
+
+
+####################################################
+# add open triangle case
+zero.in <- c(1, 4, 5, 6, 13, 14, 16, 34, 35, 36, 52, 54, 57)
+zero.out <- c(7, 8, 9, 13, 15, 17, 37, 38, 39, 55, 58, 59)
+zero.both <- c(10, 11, 12, 16, 17, 18, 40, 41, 42, 56, 58, 60)
+
+one.in <- c(43, 44, 45, 53, 54, 56, 91, 92, 93, 100, 101, 103)
+one.out <- c(46, 47, 48, 55, 58, 94, 95, 96, 100, 102, 104)
+one.both <- c(49, 50, 51, 57, 59, 60, 97, 98, 99, 103, 104, 105)
+
+adj.list.unique <- read.table("../data/Delta.txt")
+for(i in zero.in){
+	for(j in zero.out){
+		adj.list.unique <- rbind(adj.list.unique, 
+			c(0, 0, i, j))
+	}
+}
+#(0, 0)
+for(i in zero.both){
+	for(j in zero.both){
+		adj.list.unique <- rbind(adj.list.unique, 
+			c(0, 0, i, j))
+	}
+}
+for(i in one.in){
+	for(j in one.out){
+		adj.list.unique <- rbind(adj.list.unique, 
+			c(1, 1, i, j))
+	}
+}
+# (1, 1)
+for(i in one.both){
+	for(j in one.both){
+		adj.list.unique <- rbind(adj.list.unique, 
+			c(1, 1, i, j))
+	}
+}
+# (1, 0)
+for(i in zero.in){
+	for(j in one.out){
+		adj.list.unique <- rbind(adj.list.unique, 
+			c(1, 0, i, j))
+	}
+}
+for(i in zero.out){
+	for(j in one.in){
+		adj.list.unique <- rbind(adj.list.unique, 
+			c(1, 0, i, j))
+	}
+}
+for(i in zero.both){
+	for(j in one.both){
+		adj.list.unique <- rbind(adj.list.unique, 
+			c(1, 0, i, j))
+	}
+}
+
+# (0, 1)
+for(i in one.in){
+	for(j in zero.out){
+		adj.list.unique <- rbind(adj.list.unique, 
+			c(0, 1, i, j))
+	}
+}
+for(i in one.out){
+	for(j in zero.in){
+		adj.list.unique <- rbind(adj.list.unique, 
+			c(0, 1, i, j))
+	}
+}
+for(i in one.both){
+	for(j in zero.both){
+		adj.list.unique <- rbind(adj.list.unique, 
+			c(0, 1, i, j))
+	}
+}
+
+
+
+adj.list.unique <- unique(adj.list.unique)
+write.table(adj.list.unique, file = "../data/Delta2.txt", col.names = FALSE, row.names = FALSE, quote = FALSE)
