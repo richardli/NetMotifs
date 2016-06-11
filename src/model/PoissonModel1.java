@@ -100,6 +100,12 @@ public class PoissonModel1{
         bw.close();
     }
 
+    public void saveBeta(String file) throws IOException {
+        BufferedWriter bw = new BufferedWriter(new FileWriter(file));
+        bw.write(Arrays.toString(this.beta).replace("[", "").replace("]", ""));
+        bw.close();
+    }
+
     public void saveTheta(String file) throws IOException {
         BufferedWriter bw = new BufferedWriter(new FileWriter(file));
         for(int t = 0; t < this.theta_out.length; t++){
@@ -145,6 +151,11 @@ public class PoissonModel1{
         String motifFileN0 =  dir + start + "No_" + weekcount + ".txt";
         String motifFileN1 = dir + start + "Yes_" + weekcount + ".txt";
 
+        String weekcount_test = args[counter]; counter++;
+        String motifFile_test = dir + start + weekcount_test + ".txt";
+        String motifFileN0_test =  dir + start + "No_" + weekcount_test + ".txt";
+        String motifFileN1_test = dir + start + "Yes_" + weekcount_test + ".txt";
+
         String dictFile = dir + args[counter] + ".txt";counter++;
         String deltaFile = dir + args[counter] + ".txt"; counter++;
 
@@ -153,6 +164,7 @@ public class PoissonModel1{
         String saveFile_alpha = dir + "Jun2016/" + start + weekcount + post  + "_alpha.txt";
         String saveFile_theta = dir + "Jun2016/" + start + weekcount + post + "_theta.txt";
         String saveFile_y = dir + "Jun2016/" + start + weekcount + post + "_y.txt";
+        String saveFile_beta = dir + "Jun2016/" + start + weekcount + post + "_beta.txt";
 //        String saveFile_metric = dir + "Jun2016/" + args[npar + 7] + "_metric.txt";
 
         boolean supervised = false;
@@ -167,8 +179,10 @@ public class PoissonModel1{
         BufferedReader mbr = new BufferedReader(new FileReader(motifFile));
         BufferedReader mbrN0 = new BufferedReader(new FileReader(motifFileN0));
         BufferedReader mbrN1 = new BufferedReader(new FileReader(motifFileN1));
+        BufferedReader mbr_test = new BufferedReader(new FileReader(motifFile_test));
+        BufferedReader mbrN0_test = new BufferedReader(new FileReader(motifFileN0_test));
+        BufferedReader mbrN1_test = new BufferedReader(new FileReader(motifFileN1_test));
         BufferedReader dbr = new BufferedReader(new FileReader(dictFile));
-        BufferedReader deltabr = new BufferedReader(new FileReader(deltaFile));
         String line;
 
         ArrayList<int[]> motifArray = new ArrayList<int[]>();
@@ -181,14 +195,14 @@ public class PoissonModel1{
         ArrayList<double[]> dictArray = new ArrayList<double[]>();
         double[][][][] deltaArray = new double[2][2][M][M];
 
-
+        /** Motif count for current period **/
         // motif file structure: [ID, Y, time, X_1, ..., X_M]
         int count = 0;
         // since we don't care people who are already MM user,
         // maybe we don't have to model their counts?
         HashSet<Integer> already_user = new HashSet<Integer>();
 
-        while ((line = mbr.readLine()) != null & count < maxRead) {
+        while ((line = mbr.readLine()) != null & motifArray.size() < maxRead) {
             String[] field = line.split(" ");
             int y = (int) Double.parseDouble(field[1]);
 
@@ -224,7 +238,7 @@ public class PoissonModel1{
         System.out.printf("%d non-motif users processed\n", motifArray.size());
 
         count = 0;
-        while ((line = mbrN0.readLine()) != null & count < maxRead) {
+        while ((line = mbrN0.readLine()) != null & motifArrayN0.size() < maxRead) {
             if(already_user.contains(count)){
                 count++;
                 continue;
@@ -241,7 +255,7 @@ public class PoissonModel1{
         System.out.printf("%d non-motif users' 0-neighbour processed\n", motifArrayN0.size());
 
         count = 0;
-        while ((line = mbrN1.readLine()) != null & count < maxRead) {
+        while ((line = mbrN1.readLine()) != null & motifArrayN1.size() < maxRead) {
             if(already_user.contains(count)){
                 count++;
                 continue;
@@ -257,6 +271,82 @@ public class PoissonModel1{
         mbrN1.close();
         System.out.printf("%d non-motif users' 1-neighbour  processed\n", motifArrayN0.size());
 
+
+
+        /** Motif count for next period **/
+        int test_start = motifArray.size();
+        HashSet<Integer> already_user_test = new HashSet<Integer>();
+
+        while ((line = mbr_test.readLine()) != null & motifArray.size() < maxRead + test_start) {
+            String[] field = line.split(" ");
+            int y = (int) Double.parseDouble(field[1]);
+
+            // since we don't care people who are already MM user,
+            // maybe we don't have to model their counts?
+            if(y == -1){
+                already_user_test.add(count);
+                count++;
+                continue;
+            }
+
+            int[] motifTemp = new int[M];
+            for (int i = 0; i < M; i++) {
+                motifTemp[i] = (int) Double.parseDouble(field[i + 3]);
+            }
+            motifArray.add(motifTemp);
+
+            idArray.add(field[0]);
+
+            /** Notice:
+             * Y = -1  --> currently label is 1
+             * Y =  0  --> currently label is 0
+             * Y =  1  --> currently label is 0
+             * **/
+
+            predLabelArray.add(y);
+            y = y ==  1 ? 0:y;
+            y = y == -1 ? 1:y;
+            outcomeArray.add(y);
+            count ++;
+        }
+        int test_end = motifArray.size() - 1;
+        mbr_test.close();
+        System.out.printf("%d non-motif users processed for next period\n", motifArray.size());
+
+        count = test_start;
+        while ((line = mbrN0_test.readLine()) != null & motifArrayN0.size() < maxRead + test_start) {
+            if(already_user_test.contains(count)){
+                count++;
+                continue;
+            }
+            String[] field = line.split(" ");
+            int[] motifTemp = new int[M];
+            for (int i = 0; i < M; i++) {
+                motifTemp[i] = (int) Double.parseDouble(field[i + 3]);
+            }
+            motifArrayN0.add(motifTemp);
+            count++;
+        }
+        mbrN0_test.close();
+        System.out.printf("%d non-motif users' 0-neighbour processed for next period\n", motifArrayN0.size());
+
+        count = test_start;
+        while ((line = mbrN1_test.readLine()) != null & motifArrayN1.size() < maxRead + test_start) {
+            if(already_user_test.contains(count)){
+                count++;
+                continue;
+            }
+            String[] field = line.split(" ");
+            int[] motifTemp = new int[M];
+            for (int i = 0; i < M; i++) {
+                motifTemp[i] = (int) Double.parseDouble(field[i + 3]);
+            }
+            motifArrayN1.add(motifTemp);
+            count++;
+        }
+        mbrN1_test.close();
+        System.out.printf("%d non-motif users' 1-neighbour  processed\n", motifArrayN0.size());
+
         // dict file structure: [D_i,1, ..., D_i,M]
         while ((line = dbr.readLine()) != null) {
             String[] field = line.split(" ");
@@ -268,18 +358,23 @@ public class PoissonModel1{
         }
         dbr.close();
 
-        // delta file structure: [y0, y1, m0 + 1, m1 + 1]
-        while ((line = deltabr.readLine()) != null) {
-            String[] field = line.split(" ");
-            int y0 = Integer.parseInt(field[0]);
-            int y1 = Integer.parseInt(field[1]);
-            int m0 = Integer.parseInt(field[2]) - 1;
-            int m1 = Integer.parseInt(field[3]) - 1;
+        boolean update_theta = true;
+        try {
+            BufferedReader deltabr = new BufferedReader(new FileReader(deltaFile));
+            // delta file structure: [y0, y1, m0 + 1, m1 + 1]
+            while ((line = deltabr.readLine()) != null) {
+                String[] field = line.split(" ");
+                int y0 = Integer.parseInt(field[0]);
+                int y1 = Integer.parseInt(field[1]);
+                int m0 = Integer.parseInt(field[2]) - 1;
+                int m1 = Integer.parseInt(field[3]) - 1;
 
-            deltaArray[y0][y1][m0][m1] = 1;
+                deltaArray[y0][y1][m0][m1] = 1;
+            }
+            deltabr.close();
+        }catch (Exception e) {
+            update_theta = false;
         }
-        deltabr.close();
-
 
 
         int[][] motif = new int[motifArray.size()][M];
@@ -310,12 +405,15 @@ public class PoissonModel1{
                 1, 1, false, seed,
                 motif, motifNeighbour,
                 dict, deltaArray, model.y,
-                0.00001, 0.00001,
-                supervised);
+                0.001, 0.001,
+                supervised,
+                test_start, test_end,
+                update_theta);
 
         model.saveAlphaCompact(saveFile_alpha);
         model.saveTheta(saveFile_theta);
         model.saveY(saveFile_y);
+        model.saveBeta(saveFile_beta);
 //        model.saveMetric(saveFile_metric);
     }
 
@@ -637,7 +735,9 @@ public class PoissonModel1{
             int[] y,
             double delta_likelihood,
             double delta_para,
-            boolean supervised
+            boolean supervised,
+            int test_start, int test_end,
+            boolean update_theta
     ){
 
 
@@ -682,21 +782,29 @@ public class PoissonModel1{
 
 
 		/** Random Initialization **/
+        double au_nonneg = a_u == 0 ? 1 : a_u;
+        double bu_nonneg = b_u == 0 ? 1 : b_u;
+        double av_nonneg = a_v == 0 ? 1 : a_v;
+        double bv_nonneg = b_v == 0 ? 1 : b_v;
+        double ath_nonneg = a_theta == 0 ? 1 : a_theta;
+        double bth_nonneg = a_theta == 0 ? 1 : b_theta;
         for(int i = 0; i < N; i++){
             for(int p = 0; p < P; p++){
-                u_now[i][p] = rngG.nextDouble(a_u, b_u);
+                u_now[i][p] = rngG.nextDouble(au_nonneg, bu_nonneg);
             }
         }
         if(update_v){
             for(int j = 0; j < M; j++){
                 for(int p = 0; p < P; p++){
-                    v_now[j][p] = rngG.nextDouble(a_v, b_v);
+                    v_now[j][p] = rngG.nextDouble(av_nonneg, bv_nonneg);
                 }
             }
         }
-        for(int j = 0; j < M; j++){
-            for(int jj = 0; jj < M; jj++){
-                theta_now[j][jj] = rngG.nextDouble(a_theta, b_theta);
+        if(update_theta){
+            for(int j = 0; j < M; j++){
+                for(int jj = 0; jj < M; jj++){
+                    theta_now[j][jj] = rngG.nextDouble(ath_nonneg, bth_nonneg);
+                }
             }
         }
 
@@ -719,24 +827,27 @@ public class PoissonModel1{
 
         HashMap<Integer, Double> MotifStar = new HashMap<Integer, Double>();
         double[][] sum_i_MotifStar = new double[M][M];
-        for(int i = 0; i < N; i++){
-            for(int j = 0; j < M; j++){
-                for(int jj = 0; jj < M; jj ++){
-                    for(int k = 0; k < K ; k++){
-                        double temp =  motifNeighbour[k][i][jj] * delta[y[i]][k][j][jj];
-                        if(temp > 0){
-                            int keytemp = MathUtil.orderhash(M, M, i, j, jj);
-                            if(MotifStar.get(keytemp) != null){
-                                MotifStar.put(keytemp, MotifStar.get(keytemp) + temp);
-                            }else{
-                                MotifStar.put(keytemp, temp);
+        if(update_theta){
+            for(int i = 0; i < N; i++){
+                for(int j = 0; j < M; j++){
+                    for(int jj = 0; jj < M; jj ++){
+                        for(int k = 0; k < K ; k++){
+                            double temp =  motifNeighbour[k][i][jj] * delta[y[i]][k][j][jj];
+                            if(temp > 0){
+                                int keytemp = MathUtil.orderhash(M, M, i, j, jj);
+                                if(MotifStar.get(keytemp) != null){
+                                    MotifStar.put(keytemp, MotifStar.get(keytemp) + temp);
+                                }else{
+                                    MotifStar.put(keytemp, temp);
+                                }
                             }
+                            sum_i_MotifStar[j][jj] += temp;
                         }
-                        sum_i_MotifStar[j][jj] += temp;
                     }
                 }
             }
         }
+
 
 
         /** Start main algorithm **/
@@ -753,14 +864,12 @@ public class PoissonModel1{
         double beta_change = 0;
         int count_outer = 0;
         double loglik_last = -1 * Double.MAX_VALUE;
-        if(supervised){
-            this.beta = new double[P + 1];
-        }
+        this.beta = new double[P + 1];
         System.out.println("start fitting model");
 
         /** ---------- Outer Loop -----------**/
         while((Math.abs(lik_change) > delta_likelihood |  beta_change > delta_para)
-                & count_outer < 1000){
+                & count_outer < 500){
 
             /** Set global row-wise latent variable lambda^{u, a} **/
             for (double[] row: lambda_u_a) Arrays.fill(row, a_u);
@@ -799,10 +908,12 @@ public class PoissonModel1{
                     for(int i = 0; i < N; i++){
                         /** Calculate expectations for xsub **/
                         double[] tildeX = new double[M];
-                        for(int jj = 0; jj < M; jj++){
-                            int tempkey = MathUtil.orderhash(M, M, i, j, jj);
-                            if(MotifStar.get(tempkey) != null){
-                                tildeX[jj] = MotifStar.get(tempkey);
+                        if(update_theta) {
+                            for (int jj = 0; jj < M; jj++) {
+                                int tempkey = MathUtil.orderhash(M, M, i, j, jj);
+                                if (MotifStar.get(tempkey) != null) {
+                                    tildeX[jj] = MotifStar.get(tempkey);
+                                }
                             }
                         }
                         double[] xsub = calculate_Xsub_Mean(P, M, u_now[i], v_now[j], theta_now[j],
@@ -833,6 +944,10 @@ public class PoissonModel1{
                         double tmp = lambda_theta_a[j][jj] / lambda_theta_b[j][jj];
                         para_change += Math.abs(tmp - theta_now[j][jj]) / (M + 0.0);
                         theta_now[j][jj] = tmp;
+                    }
+                    /** within j-th column: update local beta **/
+                    if(supervised) {
+                        // TODO: update beta_k | u, v, theta ?
                     }
 
                     count_inner ++;
@@ -871,21 +986,11 @@ public class PoissonModel1{
                                                 theta_now[j], tildeX);
                 }
             }
-            /** Update beta with regression **/
-            if(supervised){
-                SupervisedModel beta_model = new SupervisedModel(u_now, this.predict_label, "IRLS");
-                beta_model.fit();
-                loglik_now += beta_model.get_loglik();
-                double[] beta_tmp = beta_model.get_coef();
-                beta_change = 0;
-                for(int i = 0; i < P+1; i++){
-                    beta_change += Math.abs(beta_tmp[i] - this.beta[i]);
-                    this.beta[i] = beta_tmp[i];
-                }
-                System.out.printf("Betas: %.4f, %.4f, %.4f, %.4f, %.4f, \n",
-                        this.beta[0], this.beta[1],this.beta[2],this.beta[3],this.beta[4]);
-            }
+            // TODO: update global beta?
+            if(supervised) {
+                // TODO: update beta | u, v, theta ?
 
+            }
             lik_change = loglik_now - loglik_last;
             loglik_last = loglik_now;
             count_outer ++;
@@ -894,6 +999,26 @@ public class PoissonModel1{
                     loglik_now, lik_change);
             long now   = System.currentTimeMillis();
             System.out.printf("Time elapsed: %.2fmin\n", (double) (now - start)/1000/60);
+        }
+
+        /** Update beta with regression only after convergence if unsupervised **/
+        if(!supervised){
+            SupervisedModel beta_model = new SupervisedModel(u_now, this.predict_label, "IRLS", test_start,
+                    test_end);
+            beta_model.fit();
+            double[] beta_tmp = beta_model.get_coef();
+            for(int i = 0; i < P+1; i++){
+                this.beta[i] = beta_tmp[i];
+            }
+            beta_model.test(this.beta);
+            System.out.printf("Betas: %.4f, %.4f, %.4f, %.4f, %.4f, \n",
+                    this.beta[0], this.beta[1], this.beta[2], this.beta[3], this.beta[4]);
+            System.out.printf("Cutoff 0: TP: %d, FP: %d, TN: %d, FN: %d\n",
+                    beta_model.tp, beta_model.fp, beta_model.tn,
+                    beta_model.fn);
+            System.out.printf("Cutoff E: TP: %d, FP: %d, TN: %d, FN: %d\n",
+                    beta_model.tp2, beta_model.fp2, beta_model.tn2,
+                    beta_model.fn2);
         }
         /** Set output **/
         for(int i = 0; i < N; i++){
@@ -923,6 +1048,7 @@ public class PoissonModel1{
         for(int i = 0; i < u2.length; i++){mean += u2[i] * v2[i];}
 
         double loglik = 0;
+        if(mean == 0) {mean = 0.0001;}
 
         loglik -=  org.apache.commons.math3.special.Gamma.logGamma(x + 1);
         loglik += x * Math.log(mean);
@@ -942,7 +1068,11 @@ public class PoissonModel1{
             prob_sum += prob[P + jj];
         }
 
-        if(prob_sum != 0){
+        if(prob_sum == 0){
+            for(int l = 0; l < P + M; l++){
+                prob[l] = sum / (P + M + 0.0);
+            }
+        }else{
             for(int l = 0; l < P + M; l++){
                 prob[l] *= sum / prob_sum;
             }
