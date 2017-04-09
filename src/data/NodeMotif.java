@@ -37,6 +37,15 @@ public class NodeMotif {
     public Set<Integer> mList = new HashSet<Integer>();
     // List of all contact
     public Set<Integer> nList = new HashSet<Integer>();
+
+    // same things for MM user neighbors
+    public int inFreqMM;
+    public int outFreqMM;
+    public Set<Integer> sListMM = new HashSet<Integer>();
+    public Set<Integer> rListMM = new HashSet<Integer>();
+    public Set<Integer> mListMM = new HashSet<Integer>();
+    public Set<Integer> nListMM = new HashSet<Integer>();
+
     // communication frequency for all contact
     public HashMap<Integer, Integer> nListFreq = new HashMap<Integer, Integer>();
 
@@ -53,6 +62,12 @@ public class NodeMotif {
         this.rList = new HashSet<Integer>();
         this.mList = new HashSet<Integer>();
         this.nList = new HashSet<Integer>();
+        this.inFreqMM = 0;
+        this.outFreqMM = 0;
+        this.sListMM = new HashSet<Integer>();
+        this.rListMM = new HashSet<Integer>();
+        this.mListMM = new HashSet<Integer>();
+        this.nListMM = new HashSet<Integer>();
     }
 
     /**
@@ -106,7 +121,47 @@ public class NodeMotif {
         this.rList = new HashSet<Integer>();
         this.nList = new HashSet<Integer>();
         this.mList = new HashSet<Integer>();
+        this.sListMM = new HashSet<Integer>();
+        this.rListMM = new HashSet<Integer>();
+        this.nListMM = new HashSet<Integer>();
+        this.mListMM = new HashSet<Integer>();
         this.nListFreq = new HashMap<Integer, Integer>();
+    }
+
+    /**
+     * function to count a outgoing call
+     * @param n the index of the other node
+     * @param MMuser whether the other node is MM user
+     */
+    public void sendto(Integer n, boolean MMuser) {
+        if (this.id == n) {
+            return;
+        }
+        this.sList.add(n);
+        this.nList.add(n);
+        this.countFreq(n);
+        if(MMuser){
+            this.sListMM.add(n);
+            this.nListMM.add(n);
+        }
+    }
+
+    /**
+     * function to count a incoming call
+     * @param n the index of the other node
+     * @param MMuser whether the other node is MM user
+     */
+    public void recfrom(Integer n, boolean MMuser) {
+        if (this.id == n) {
+            return;
+        }
+        this.rList.add(n);
+        this.nList.add(n);
+        this.countFreq(n);
+        if(MMuser){
+            this.rListMM.add(n);
+            this.nList.add(n);
+        }
     }
 
     /**
@@ -152,6 +207,9 @@ public class NodeMotif {
         this.mList = Sets.intersection(this.sList, this.rList);
         this.sList = Sets.difference(this.sList, this.mList);
         this.rList = Sets.difference(this.rList, this.mList);
+        this.mListMM = Sets.intersection(this.sListMM, this.rListMM);
+        this.sListMM = Sets.difference(this.sListMM, this.mListMM);
+        this.rListMM = Sets.difference(this.rListMM, this.mListMM);
 
     }
 

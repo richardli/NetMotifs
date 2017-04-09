@@ -28,9 +28,9 @@ public class NodeSample6m extends NodeSampleWeekNeighbour{
         int nfile = 6;
         String fileDates[][] = new String[2][nfile];
         fileDates[0] = new String[]{"0701", "0702", "0703", "0704", "0705", "0706"};
-        fileDates[1] = new String[]{"0707", "0708", "0709", "0710", "0711", "0712"};  // 0706, 0806, 0810
+        fileDates[1] = new String[]{"0707", "0708", "0709", "0710", "0711", "0712"};
 
-        boolean first_half = true;
+        boolean first_half = Integer.parseInt(args[0]) == 0701;
         // set the end date and which set of data to read
         String endDate = "0707";
         int set_to_read_phone = 0;
@@ -46,6 +46,7 @@ public class NodeSample6m extends NodeSampleWeekNeighbour{
         }
 
         // specify file header to output
+        String outputHeader0 = "/data/rwanda_anon/richardli/MotifwithNeighbour/6mBasic_" + endDate;
         String outputHeader = "/data/rwanda_anon/richardli/MotifwithNeighbour/6m" + endDate;
         String outputHeaderYes = "/data/rwanda_anon/richardli/MotifwithNeighbour/6mYes_" + endDate;
         String outputHeaderNo = "/data/rwanda_anon/richardli/MotifwithNeighbour/6mNo_" + endDate;
@@ -66,6 +67,7 @@ public class NodeSample6m extends NodeSampleWeekNeighbour{
 
         // initialize mm file reader outside the loop
         NodeSample6m fullData = new NodeSample6m();
+        String outputbasics = outputHeader0 + ".txt";
         String output = outputHeader + ".txt";
         String outputYes = outputHeaderYes + ".txt";
         String outputNo = outputHeaderNo  + ".txt";
@@ -162,6 +164,17 @@ public class NodeSample6m extends NodeSampleWeekNeighbour{
                 tempCount++;
                 if (tempCount % 10000 == 0) System.out.printf("-");
             }
+
+
+            // output to file (simple summary stats)
+            BufferedWriter sc0 = new BufferedWriter(new FileWriter(outputbasics));
+            for (int j : fullData.dict.values()) {
+                if (fullData.allMotif.nodes.get(j) == null) {
+                    continue;
+                }
+                fullData.allMotif.nodes.get(j).printTo(sc0, 120, 2, true);
+            }
+            sc0.close();
 
             // output to file
             BufferedWriter sc = new BufferedWriter(new FileWriter(output));

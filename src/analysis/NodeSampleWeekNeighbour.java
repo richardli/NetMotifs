@@ -160,7 +160,8 @@ public class NodeSampleWeekNeighbour{
                         this.allMotif.nodes.get(index).label = 1;
 
                         // extra case when streaming:
-                        // if this node signed up before this period, but no transfer sent in first week
+                        // if this node signed up before this period, but no transfer sent in this period
+                        // todo: is this even possible?
                     } else if (this.allMotif.nodes.get(index).y == 1 & this.allMotif.nodes.get(index).t < midTime){
                         this.allMotif.nodes.get(index).label = 1;
                         this.allMotif.nodes.get(index).y = -1;
@@ -234,8 +235,8 @@ public class NodeSampleWeekNeighbour{
                     // update neighborhood
                     int sid = this.dict.get(s);
                     int rid = this.dict.get(r);
-                    this.allMotif.nodes.get(sid).sendto(rid);
-                    this.allMotif.nodes.get(rid).recfrom(sid);
+                    this.allMotif.nodes.get(sid).sendto(rid, this.allMotif.nodes.get(rid).label == 1);
+                    this.allMotif.nodes.get(rid).recfrom(sid, this.allMotif.nodes.get(sid).label == 1);
 
                     // print a dot for each new day
                     if (time - counter > 24) {
