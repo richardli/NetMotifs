@@ -119,13 +119,23 @@ public class PoissonModel2{
         }
 
         public void saveTheta(String file) throws IOException {
+            int T = this.theta_out.length;
             BufferedWriter bw = new BufferedWriter(new FileWriter(file));
-            for(int t = 0; t < this.theta_out.length; t++){
-                for(int i = 0; i < this.theta_out[t].length; i++){
-                    bw.write(Arrays.toString(this.theta_out[t][i]).replace("[", "").replace("]", ""));
-                    bw.write("\n");
+            for(int i = 0; i < this.theta_out[0].length; i++){
+                for(int j = 0; j < this.theta_out[0][i].length; j++){
+                    this.theta_out[0][i][j] /= (T + 0.0);
+                    for(int t = 1; t < T; t++){
+                        this.theta_out[0][i][j] += this.theta_out[t][i][j] / (T + 0.0);
+                    }
                 }
+                bw.write(Arrays.toString(this.theta_out[0][i]).replace("[", "").replace("]", ""));
             }
+//            for(int t = 0; t < this.theta_out.length; t++){
+//                for(int i = 0; i < this.theta_out[t].length; i++){
+//                    bw.write(Arrays.toString(this.theta_out[t][i]).replace("[", "").replace("]", ""));
+//                    bw.write("\n");
+//                }
+//            }
             bw.close();
         }
 
@@ -717,342 +727,342 @@ public class PoissonModel2{
         }
 
 
-        /**
-         *
-         * @param a_u Gamma parameter for \alpha
-         * @param b_u Gamma parameter for \alpha
-         * @param a_theta Gamma parameter for \theta
-         * @param b_theta Gamma parameter for \theta
-         * @param a_v Gamma parameter for d
-         * @param b_v Gamma parameter for d
-         * @param update_v whether to update v (dict)
-         * @param seed seed of chain
-         * @param motif N by M matrix of counts
-         * @param motifNeighbour K by N by M array of counts (K: number of node type)
-         * @param dict P by M matrix of dict/design matrix
-         * @param delta  K by K by N by M array of binary values
-         * @param y length N vector of outcome
-         * @param delta_likelihood max likelihood change for convergence
-         * @param delta_para  max parameter change for convergence
-         * @param supervised boolean whether to perform supervised version
-         * @return
-         */
-        public void Poisson_additive_VB(
-                double a_u, double b_u,
-                double a_theta, double b_theta,
-                double a_v, double b_v, boolean update_v,
-                int seed,
-                int[][] motif, int[][][] motifNeighbour,
-                double[][] dict,
-                double[][][][] delta,
-                int[] y,
-                double delta_likelihood,
-                double delta_para,
-                boolean supervised,
-                int test_start, int test_end,
-                boolean update_theta
-        ){
-
-
-            int N = motif.length;
-            int M = motif[0].length;
-            int P = dict.length;
-            int K = motifNeighbour.length;
-
-            DoubleRandomEngine rngEngine=new DoubleMersenneTwister(seed);
-            Random rand = new Random();
-            Gamma rngG=new Gamma(1.0, 1.0, rngEngine);
-            Binomial rngB = new Binomial(1, 0.5, rngEngine);
-            Beta rngBe = new Beta(1, 1, rngEngine);
-            Multinomial rngM = new Multinomial(P);
-
-            /** parameters: E(u), E(v), E(theta) **/
-            double[][] u_now = new double[N][P];
-            double[][] v_now = new double[M][P];
-            for(int p = 0; p < P; p++){
-                for(int j = 0; j < M; j++){
-                    v_now[j][p] = dict[p][j];
-                }
-            }
-            double[][] theta_now = new double[M][M];
-
-            /** variational parameters **/
-            double[][] lambda_u_a = new double[N][P];
-            double[][] lambda_u_b = new double[N][P];
-            double[][] lambda_v_a = new double[M][P];
-            double[][] lambda_v_b = new double[M][P];
-            double[][] lambda_theta_a = new double[M][M];
-            double[][] lambda_theta_b = new double[M][M];
-
-
-            /** diagnostics and output parameters **/
-            this.mse = new double[1];
-            this.mae = new double[1];
-            this.mmae = new double[1];
-            this.loglik = new double[1];
-            this.alpha_out = new double[1][N][P];
-            this.theta_out = new double[1][M][M];
-
-
-            /** Random Initialization **/
-            double au_nonneg = a_u == 0 ? 1 : a_u;
-            double bu_nonneg = b_u == 0 ? 1 : b_u;
-            double av_nonneg = a_v == 0 ? 1 : a_v;
-            double bv_nonneg = b_v == 0 ? 1 : b_v;
-            double ath_nonneg = a_theta == 0 ? 1 : a_theta;
-            double bth_nonneg = a_theta == 0 ? 1 : b_theta;
-            for(int i = 0; i < N; i++){
-                for(int p = 0; p < P; p++){
-                    u_now[i][p] = rngG.nextDouble(au_nonneg, bu_nonneg);
-                }
-            }
-            if(update_v){
-                for(int j = 0; j < M; j++){
-                    for(int p = 0; p < P; p++){
-                        v_now[j][p] = rngG.nextDouble(av_nonneg, bv_nonneg);
-                    }
-                }
-            }
-            if(update_theta){
-                for(int j = 0; j < M; j++){
-                    for(int jj = 0; jj < M; jj++){
-                        theta_now[j][jj] = rngG.nextDouble(ath_nonneg, bth_nonneg);
-                    }
-                }
-            }
-
-            /** Pre-process: memory intensive approach to reduce computational cost
-             *  After processing MotifStar,
-             *  Motif_{ij} ~ u'v + sum_{j'} theta_{jj'} * MotifStar_{ijj'}
-             **/
-//        double[][][] MotifStar = new double[N][M][M];
-//        double[][] sum_i_MotifStar = new double[M][M];
-//        for(int i = 0; i < N; i++){
-//            for(int j = 0; j < M; j++){
-//                for(int jj = 0; jj < M; jj ++){
-//                    for(int k = 0; k < K ; k++){
-//                        MotifStar[i][j][jj] += motifNeighbour[k][i][jj] * delta[y[i]][k][j][jj];
-//                        sum_i_MotifStar[j][jj] += MotifStar[i][j][jj];
+//        /**
+//         *
+//         * @param a_u Gamma parameter for \alpha
+//         * @param b_u Gamma parameter for \alpha
+//         * @param a_theta Gamma parameter for \theta
+//         * @param b_theta Gamma parameter for \theta
+//         * @param a_v Gamma parameter for d
+//         * @param b_v Gamma parameter for d
+//         * @param update_v whether to update v (dict)
+//         * @param seed seed of chain
+//         * @param motif N by M matrix of counts
+//         * @param motifNeighbour K by N by M array of counts (K: number of node type)
+//         * @param dict P by M matrix of dict/design matrix
+//         * @param delta  K by K by N by M array of binary values
+//         * @param y length N vector of outcome
+//         * @param delta_likelihood max likelihood change for convergence
+//         * @param delta_para  max parameter change for convergence
+//         * @param supervised boolean whether to perform supervised version
+//         * @return
+//         */
+//        public void Poisson_additive_VB(
+//                double a_u, double b_u,
+//                double a_theta, double b_theta,
+//                double a_v, double b_v, boolean update_v,
+//                int seed,
+//                int[][] motif, int[][][] motifNeighbour,
+//                double[][] dict,
+//                double[][][][] delta,
+//                int[] y,
+//                double delta_likelihood,
+//                double delta_para,
+//                boolean supervised,
+//                int test_start, int test_end,
+//                boolean update_theta
+//        ){
+//
+//
+//            int N = motif.length;
+//            int M = motif[0].length;
+//            int P = dict.length;
+//            int K = motifNeighbour.length;
+//
+//            DoubleRandomEngine rngEngine=new DoubleMersenneTwister(seed);
+//            Random rand = new Random();
+//            Gamma rngG=new Gamma(1.0, 1.0, rngEngine);
+//            Binomial rngB = new Binomial(1, 0.5, rngEngine);
+//            Beta rngBe = new Beta(1, 1, rngEngine);
+//            Multinomial rngM = new Multinomial(P);
+//
+//            /** parameters: E(u), E(v), E(theta) **/
+//            double[][] u_now = new double[N][P];
+//            double[][] v_now = new double[M][P];
+//            for(int p = 0; p < P; p++){
+//                for(int j = 0; j < M; j++){
+//                    v_now[j][p] = dict[p][j];
+//                }
+//            }
+//            double[][] theta_now = new double[M][M];
+//
+//            /** variational parameters **/
+//            double[][] lambda_u_a = new double[N][P];
+//            double[][] lambda_u_b = new double[N][P];
+//            double[][] lambda_v_a = new double[M][P];
+//            double[][] lambda_v_b = new double[M][P];
+//            double[][] lambda_theta_a = new double[M][M];
+//            double[][] lambda_theta_b = new double[M][M];
+//
+//
+//            /** diagnostics and output parameters **/
+//            this.mse = new double[1];
+//            this.mae = new double[1];
+//            this.mmae = new double[1];
+//            this.loglik = new double[1];
+//            this.alpha_out = new double[1][N][P];
+//            this.theta_out = new double[1][M][M];
+//
+//
+//            /** Random Initialization **/
+//            double au_nonneg = a_u == 0 ? 1 : a_u;
+//            double bu_nonneg = b_u == 0 ? 1 : b_u;
+//            double av_nonneg = a_v == 0 ? 1 : a_v;
+//            double bv_nonneg = b_v == 0 ? 1 : b_v;
+//            double ath_nonneg = a_theta == 0 ? 1 : a_theta;
+//            double bth_nonneg = a_theta == 0 ? 1 : b_theta;
+//            for(int i = 0; i < N; i++){
+//                for(int p = 0; p < P; p++){
+//                    u_now[i][p] = rngG.nextDouble(au_nonneg, bu_nonneg);
+//                }
+//            }
+//            if(update_v){
+//                for(int j = 0; j < M; j++){
+//                    for(int p = 0; p < P; p++){
+//                        v_now[j][p] = rngG.nextDouble(av_nonneg, bv_nonneg);
 //                    }
 //                }
 //            }
+//            if(update_theta){
+//                for(int j = 0; j < M; j++){
+//                    for(int jj = 0; jj < M; jj++){
+//                        theta_now[j][jj] = rngG.nextDouble(ath_nonneg, bth_nonneg);
+//                    }
+//                }
+//            }
+//
+//            /** Pre-process: memory intensive approach to reduce computational cost
+//             *  After processing MotifStar,
+//             *  Motif_{ij} ~ u'v + sum_{j'} theta_{jj'} * MotifStar_{ijj'}
+//             **/
+////        double[][][] MotifStar = new double[N][M][M];
+////        double[][] sum_i_MotifStar = new double[M][M];
+////        for(int i = 0; i < N; i++){
+////            for(int j = 0; j < M; j++){
+////                for(int jj = 0; jj < M; jj ++){
+////                    for(int k = 0; k < K ; k++){
+////                        MotifStar[i][j][jj] += motifNeighbour[k][i][jj] * delta[y[i]][k][j][jj];
+////                        sum_i_MotifStar[j][jj] += MotifStar[i][j][jj];
+////                    }
+////                }
+////            }
+////        }
+//
+//            HashMap<Integer, Double> MotifStar = new HashMap<Integer, Double>();
+//            double[][] sum_i_MotifStar = new double[M][M];
+//            if(update_theta){
+//                for(int i = 0; i < N; i++){
+//                    for(int j = 0; j < M; j++){
+//                        for(int jj = 0; jj < M; jj ++){
+//                            for(int k = 0; k < K ; k++){
+//                                double temp =  motifNeighbour[k][i][jj] * delta[y[i]][k][j][jj];
+//                                if(temp > 0){
+//                                    int keytemp = MathUtil.orderhash(M, M, i, j, jj);
+//                                    if(MotifStar.get(keytemp) != null){
+//                                        MotifStar.put(keytemp, MotifStar.get(keytemp) + temp);
+//                                    }else{
+//                                        MotifStar.put(keytemp, temp);
+//                                    }
+//                                }
+//                                sum_i_MotifStar[j][jj] += temp;
+//                            }
+//                        }
+//                    }
+//                }
+//            }
+//
+//
+//
+//            /** Start main algorithm **/
+//            long start = System.currentTimeMillis();
+//
+//            /** Initialize lambda_theta_b  **/
+//            for(int j  = 0; j < M; j++){
+//                for(int jj = 0; jj < M; jj++){
+//                    lambda_theta_b[j][jj] = b_theta + sum_i_MotifStar[j][jj];
+//                }
+//            }
+//
+//            double lik_change = Double.MAX_VALUE;
+//            double beta_change = 0;
+//            int count_outer = 0;
+//            double loglik_last = -1 * Double.MAX_VALUE;
+//            this.beta = new double[P + 1];
+//            System.out.println("start fitting model");
+//
+//            /** ---------- Outer Loop -----------**/
+//            while((Math.abs(lik_change) > delta_likelihood |  beta_change > delta_para)
+//                    & count_outer < 500){
+//
+//                /** Set global row-wise latent variable lambda^{u, a} **/
+//                for (double[] row: lambda_u_a) Arrays.fill(row, a_u);
+//                for (double[] row: lambda_u_b) Arrays.fill(row, b_u);
+//
+//                int count_local = 0;
+//                /** Update each column j **/
+//                for(int j = 0; j < M; j++){
+//                    double[][] lambda_u_a_local = new double[N][P];
+//
+//                    double para_change = Double.MAX_VALUE;
+//                    double count_inner = 0;
+//
+//                    /** ---------- Inner Loop -----------**/
+//                    while(para_change > delta_para & count_inner < 100){
+//                        para_change = 0;
+//
+//                        /** Within j-th column: Initialize local lambda^{u, a}, lambda^{v, a}, lambda^{theta, a} **/
+//                        for (double[] row: lambda_u_a_local) Arrays.fill(row, 0);
+//                        for (double[] row: lambda_v_a) Arrays.fill(row, a_v);
+//                        for (double[] row: lambda_theta_a) Arrays.fill(row, a_theta);
+//
+//                        /** Within j-th column: Set lambda^{v, b}  **/
+//                        if(update_v){
+//                            double[] sum_i_E_v = new double[P];
+//                            for(int k = 0; k < P; k++){
+//                                for(int i = 0; i < N; i++){
+//                                    sum_i_E_v[k] += u_now[i][k];
+//                                }
+//                            }
+//                            for(int k = 0; k < P; k++){
+//                                lambda_v_b[j][k] = b_u + sum_i_E_v[k];
+//                            }
+//                        }
+//                        /** Within j-th column: Update for each row i **/
+//                        for(int i = 0; i < N; i++){
+//                            /** Calculate expectations for xsub **/
+//                            double[] tildeX = new double[M];
+//                            if(update_theta) {
+//                                for (int jj = 0; jj < M; jj++) {
+//                                    int tempkey = MathUtil.orderhash(M, M, i, j, jj);
+//                                    if (MotifStar.get(tempkey) != null) {
+//                                        tildeX[jj] = MotifStar.get(tempkey);
+//                                    }
+//                                }
+//                            }
+//                            double[] xsub = calculate_Xsub_Mean(P, M, u_now[i], v_now[j], theta_now[j],
+//                                    tildeX, motif[i][j]);
+//
+//                            /** Update lambda^{u, a}_local, lambda^{v, a}, lambda^{theta, a} **/
+//                            for(int k = 0; k < P; k++){
+//                                lambda_u_a_local[i][k] += xsub[k];
+//                            }
+//                            if(update_v){
+//                                for(int k = 0; k < P; k++) {
+//                                    lambda_v_a[j][k] += xsub[k];
+//                                }
+//                            }
+//                            for(int jj = 0; jj < M; jj++){
+//                                lambda_theta_a[j][jj] += xsub[jj + P];
+//                            }
+//                        }
+//                        /** Within j-th column: Update E(v) and E(theta) **/
+//                        if(update_v){
+//                            for(int k = 0; k < P; k++) {
+//                                double tmp = lambda_v_a[j][k] / lambda_v_b[j][k];
+//                                para_change += Math.abs(tmp - v_now[j][k]) / (P + 0.0);
+//                                v_now[j][k] = tmp;
+//                            }
+//                        }
+//                        for(int jj = 0; jj < M; jj++){
+//                            double tmp = lambda_theta_a[j][jj] / lambda_theta_b[j][jj];
+//                            para_change += Math.abs(tmp - theta_now[j][jj]) / (M + 0.0);
+//                            theta_now[j][jj] = tmp;
+//                        }
+//                        /** within j-th column: update local beta **/
+//                        if(supervised) {
+//                            // TODO: update beta_k | u, v, theta ?
+//                        }
+//
+//                        count_inner ++;
+//                    }
+//                    count_local += count_inner;
+//
+//                    /** Within j-th column: Update global lambda^{u, a} **/
+//                    for(int i = 0; i < N; i++) {
+//                        for (int k = 0; k < P; k++) {
+//                            lambda_u_a[i][k] += lambda_u_a_local[i][k];
+//                            lambda_u_b[i][k] += v_now[j][k];
+//                        }
+//                    }
+//                }
+//
+//                /** update E(u) **/
+//                for(int i = 0; i < N; i++) {
+//                    for (int k = 0; k < P; k++) {
+//                        u_now[i][k] = lambda_u_a[i][k] / lambda_u_b[i][k];
+//                    }
+//                }
+//
+//                /** Calculate likelihood **/
+//                double loglik_now = 0;
+//                for(int i = 0; i < N; i++){
+//                    for(int j = 0; j < M; j++){
+//                        double[] tildeX = new double[M];
+//                        for(int jj = 0; jj < M; jj++){
+//                            int tempkey = MathUtil.orderhash(M, M, i, j, jj);
+//                            if(MotifStar.get(tempkey) != null){
+//                                tildeX[jj] = MotifStar.get(tempkey);
+//                            }
+//                        }
+//                        loglik_now += get_Pois_loglik(motif[i][j],
+//                                u_now[i], v_now[j],
+//                                theta_now[j], tildeX);
+//                    }
+//                }
+//                // TODO: update global beta?
+//                if(supervised) {
+//                    // TODO: update beta | u, v, theta ?
+//
+//                }
+//                lik_change = loglik_now - loglik_last;
+//                loglik_last = loglik_now;
+//                count_outer ++;
+//                System.out.printf("Iteration: %d, total local update: %d\n", count_outer, count_local);
+//                System.out.printf("Current log likelihood: %.6f.  Change: %.6f ",
+//                        loglik_now, lik_change);
+//                long now   = System.currentTimeMillis();
+//                System.out.printf("Time elapsed: %.2fmin\n", (double) (now - start)/1000/60);
+//            }
+//
+//            /** Update beta with regression only after convergence if unsupervised **/
+//            if(!supervised){
+//                SupervisedModel beta_model = new SupervisedModel(u_now, this.predict_label, "IRLS", test_start,
+//                        test_end);
+//                beta_model.fit();
+//                double[] beta_tmp = beta_model.get_coef();
+//                for(int i = 0; i < P+1; i++){
+//                    this.beta[i] = beta_tmp[i];
+//                }
+//                beta_model.test(this.beta);
+//                System.out.printf("Betas: %.4f, %.4f, %.4f, %.4f, %.4f, \n",
+//                        this.beta[0], this.beta[1], this.beta[2], this.beta[3], this.beta[4]);
+//                System.out.printf("Cutoff 0: TP: %d, FP: %d, TN: %d, FN: %d\n",
+//                        beta_model.tp, beta_model.fp, beta_model.tn,
+//                        beta_model.fn);
+//                System.out.printf("Cutoff E: TP: %d, FP: %d, TN: %d, FN: %d\n",
+//                        beta_model.tp2, beta_model.fp2, beta_model.tn2,
+//                        beta_model.fn2);
+//            }
+//            /** Set output **/
+//            for(int i = 0; i < N; i++){
+//                for(int k = 0; k < P; k++){
+//                    this.alpha_out[0][i][k] = u_now[i][k];
+//                }
+//            }
+//            if(update_v){
+//                for(int j = 0; j < M; j++){
+//                    for(int k = 0; k < P; k++){
+//                        this.dict_out[0][j][k] = v_now[j][k];
+//                    }
+//                }
+//            }
+//            for(int j = 0; j < M; j++){
+//                for(int jj = 0; jj < M; jj++){
+//                    this.theta_out[0][j][jj] = theta_now[j][jj];
+//                }
+//            }
+//
 //        }
-
-            HashMap<Integer, Double> MotifStar = new HashMap<Integer, Double>();
-            double[][] sum_i_MotifStar = new double[M][M];
-            if(update_theta){
-                for(int i = 0; i < N; i++){
-                    for(int j = 0; j < M; j++){
-                        for(int jj = 0; jj < M; jj ++){
-                            for(int k = 0; k < K ; k++){
-                                double temp =  motifNeighbour[k][i][jj] * delta[y[i]][k][j][jj];
-                                if(temp > 0){
-                                    int keytemp = MathUtil.orderhash(M, M, i, j, jj);
-                                    if(MotifStar.get(keytemp) != null){
-                                        MotifStar.put(keytemp, MotifStar.get(keytemp) + temp);
-                                    }else{
-                                        MotifStar.put(keytemp, temp);
-                                    }
-                                }
-                                sum_i_MotifStar[j][jj] += temp;
-                            }
-                        }
-                    }
-                }
-            }
-
-
-
-            /** Start main algorithm **/
-            long start = System.currentTimeMillis();
-
-            /** Initialize lambda_theta_b  **/
-            for(int j  = 0; j < M; j++){
-                for(int jj = 0; jj < M; jj++){
-                    lambda_theta_b[j][jj] = b_theta + sum_i_MotifStar[j][jj];
-                }
-            }
-
-            double lik_change = Double.MAX_VALUE;
-            double beta_change = 0;
-            int count_outer = 0;
-            double loglik_last = -1 * Double.MAX_VALUE;
-            this.beta = new double[P + 1];
-            System.out.println("start fitting model");
-
-            /** ---------- Outer Loop -----------**/
-            while((Math.abs(lik_change) > delta_likelihood |  beta_change > delta_para)
-                    & count_outer < 500){
-
-                /** Set global row-wise latent variable lambda^{u, a} **/
-                for (double[] row: lambda_u_a) Arrays.fill(row, a_u);
-                for (double[] row: lambda_u_b) Arrays.fill(row, b_u);
-
-                int count_local = 0;
-                /** Update each column j **/
-                for(int j = 0; j < M; j++){
-                    double[][] lambda_u_a_local = new double[N][P];
-
-                    double para_change = Double.MAX_VALUE;
-                    double count_inner = 0;
-
-                    /** ---------- Inner Loop -----------**/
-                    while(para_change > delta_para & count_inner < 100){
-                        para_change = 0;
-
-                        /** Within j-th column: Initialize local lambda^{u, a}, lambda^{v, a}, lambda^{theta, a} **/
-                        for (double[] row: lambda_u_a_local) Arrays.fill(row, 0);
-                        for (double[] row: lambda_v_a) Arrays.fill(row, a_v);
-                        for (double[] row: lambda_theta_a) Arrays.fill(row, a_theta);
-
-                        /** Within j-th column: Set lambda^{v, b}  **/
-                        if(update_v){
-                            double[] sum_i_E_v = new double[P];
-                            for(int k = 0; k < P; k++){
-                                for(int i = 0; i < N; i++){
-                                    sum_i_E_v[k] += u_now[i][k];
-                                }
-                            }
-                            for(int k = 0; k < P; k++){
-                                lambda_v_b[j][k] = b_u + sum_i_E_v[k];
-                            }
-                        }
-                        /** Within j-th column: Update for each row i **/
-                        for(int i = 0; i < N; i++){
-                            /** Calculate expectations for xsub **/
-                            double[] tildeX = new double[M];
-                            if(update_theta) {
-                                for (int jj = 0; jj < M; jj++) {
-                                    int tempkey = MathUtil.orderhash(M, M, i, j, jj);
-                                    if (MotifStar.get(tempkey) != null) {
-                                        tildeX[jj] = MotifStar.get(tempkey);
-                                    }
-                                }
-                            }
-                            double[] xsub = calculate_Xsub_Mean(P, M, u_now[i], v_now[j], theta_now[j],
-                                    tildeX, motif[i][j]);
-
-                            /** Update lambda^{u, a}_local, lambda^{v, a}, lambda^{theta, a} **/
-                            for(int k = 0; k < P; k++){
-                                lambda_u_a_local[i][k] += xsub[k];
-                            }
-                            if(update_v){
-                                for(int k = 0; k < P; k++) {
-                                    lambda_v_a[j][k] += xsub[k];
-                                }
-                            }
-                            for(int jj = 0; jj < M; jj++){
-                                lambda_theta_a[j][jj] += xsub[jj + P];
-                            }
-                        }
-                        /** Within j-th column: Update E(v) and E(theta) **/
-                        if(update_v){
-                            for(int k = 0; k < P; k++) {
-                                double tmp = lambda_v_a[j][k] / lambda_v_b[j][k];
-                                para_change += Math.abs(tmp - v_now[j][k]) / (P + 0.0);
-                                v_now[j][k] = tmp;
-                            }
-                        }
-                        for(int jj = 0; jj < M; jj++){
-                            double tmp = lambda_theta_a[j][jj] / lambda_theta_b[j][jj];
-                            para_change += Math.abs(tmp - theta_now[j][jj]) / (M + 0.0);
-                            theta_now[j][jj] = tmp;
-                        }
-                        /** within j-th column: update local beta **/
-                        if(supervised) {
-                            // TODO: update beta_k | u, v, theta ?
-                        }
-
-                        count_inner ++;
-                    }
-                    count_local += count_inner;
-
-                    /** Within j-th column: Update global lambda^{u, a} **/
-                    for(int i = 0; i < N; i++) {
-                        for (int k = 0; k < P; k++) {
-                            lambda_u_a[i][k] += lambda_u_a_local[i][k];
-                            lambda_u_b[i][k] += v_now[j][k];
-                        }
-                    }
-                }
-
-                /** update E(u) **/
-                for(int i = 0; i < N; i++) {
-                    for (int k = 0; k < P; k++) {
-                        u_now[i][k] = lambda_u_a[i][k] / lambda_u_b[i][k];
-                    }
-                }
-
-                /** Calculate likelihood **/
-                double loglik_now = 0;
-                for(int i = 0; i < N; i++){
-                    for(int j = 0; j < M; j++){
-                        double[] tildeX = new double[M];
-                        for(int jj = 0; jj < M; jj++){
-                            int tempkey = MathUtil.orderhash(M, M, i, j, jj);
-                            if(MotifStar.get(tempkey) != null){
-                                tildeX[jj] = MotifStar.get(tempkey);
-                            }
-                        }
-                        loglik_now += get_Pois_loglik(motif[i][j],
-                                u_now[i], v_now[j],
-                                theta_now[j], tildeX);
-                    }
-                }
-                // TODO: update global beta?
-                if(supervised) {
-                    // TODO: update beta | u, v, theta ?
-
-                }
-                lik_change = loglik_now - loglik_last;
-                loglik_last = loglik_now;
-                count_outer ++;
-                System.out.printf("Iteration: %d, total local update: %d\n", count_outer, count_local);
-                System.out.printf("Current log likelihood: %.6f.  Change: %.6f ",
-                        loglik_now, lik_change);
-                long now   = System.currentTimeMillis();
-                System.out.printf("Time elapsed: %.2fmin\n", (double) (now - start)/1000/60);
-            }
-
-            /** Update beta with regression only after convergence if unsupervised **/
-            if(!supervised){
-                SupervisedModel beta_model = new SupervisedModel(u_now, this.predict_label, "IRLS", test_start,
-                        test_end);
-                beta_model.fit();
-                double[] beta_tmp = beta_model.get_coef();
-                for(int i = 0; i < P+1; i++){
-                    this.beta[i] = beta_tmp[i];
-                }
-                beta_model.test(this.beta);
-                System.out.printf("Betas: %.4f, %.4f, %.4f, %.4f, %.4f, \n",
-                        this.beta[0], this.beta[1], this.beta[2], this.beta[3], this.beta[4]);
-                System.out.printf("Cutoff 0: TP: %d, FP: %d, TN: %d, FN: %d\n",
-                        beta_model.tp, beta_model.fp, beta_model.tn,
-                        beta_model.fn);
-                System.out.printf("Cutoff E: TP: %d, FP: %d, TN: %d, FN: %d\n",
-                        beta_model.tp2, beta_model.fp2, beta_model.tn2,
-                        beta_model.fn2);
-            }
-            /** Set output **/
-            for(int i = 0; i < N; i++){
-                for(int k = 0; k < P; k++){
-                    this.alpha_out[0][i][k] = u_now[i][k];
-                }
-            }
-            if(update_v){
-                for(int j = 0; j < M; j++){
-                    for(int k = 0; k < P; k++){
-                        this.dict_out[0][j][k] = v_now[j][k];
-                    }
-                }
-            }
-            for(int j = 0; j < M; j++){
-                for(int jj = 0; jj < M; jj++){
-                    this.theta_out[0][j][jj] = theta_now[j][jj];
-                }
-            }
-
-        }
 
 
         public double get_Pois_loglik(int x, double[] u, double[] v, double[] u2, double[] v2){

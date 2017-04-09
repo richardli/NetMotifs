@@ -21,3 +21,5 @@ data/motif_counts_min7
 data/unsup-runs
 data
 figures
+results
+src/other

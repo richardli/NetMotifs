@@ -108,6 +108,13 @@ print(sum(y1NG[,2] != Y1))
 
 # theta <- read.table(paste0(dir, subdir, name, "_theta.txt"), sep = ",")
 # theta <- as.matrix(theta)
+	library(lattice)
+	pdf(paste0(dir, subdir, name, "theta.pdf"), width = 5, height = 5)
+	col.l <- colorRampPalette(c('white', 'red'))
+	colnames(theta) <- rownames(theta) <- NULL
+	levelplot(theta, col.regions = gray(100:0/100))
+	dev.off()
+
 
 colnames(beta) <- c("intercept", rownames(D))
 colnames(betaNG) <- c("intercept", rownames(D))
