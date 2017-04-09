@@ -23,6 +23,14 @@ public class MapWrapper {
 		this.x.put(a, b);
 	}
 
+    public void addorput(int a, int b){
+        if(this.x.get(a) != null){
+            this.x.put(a, this.x.get(a) + b);
+        }else{
+            this.x.put(a, b);
+        }
+    }
+
     // get method
 	public int get(int a){
 		return(this.x.get(a));

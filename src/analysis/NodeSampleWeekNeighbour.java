@@ -47,7 +47,7 @@ public class NodeSampleWeekNeighbour{
     // a set of integers as sample
     public HashSet<Integer> sample = new HashSet<Integer>();
     // HashMap of NodeMotifs
-//    public NodeMotifHashMap allMotif = new NodeMotifHashMap();
+    //    public NodeMotifHashMap allMotif = new NodeMotifHashMap();
     public NodeMotifHashMap allMotif = new NodeMotifHashMap();
 
 
@@ -665,15 +665,15 @@ public class NodeSampleWeekNeighbour{
             // define MMEnd as the max time in the future we are looking at
 
             // set phone start date to be current calendar date, and move forward a period
-            String phoneStart = format.format(cal.getTime()).substring(0, period - 1);
+            String phoneStart = format.format(cal.getTime()).substring(0, 6);
 
             // set phone end date as current calendar date, and move forward a priod
             cal.add(Calendar.DATE, period);
-            String phoneEnd = format.format(cal.getTime()).substring(0, period - 1);
+            String phoneEnd = format.format(cal.getTime()).substring(0, 6);
 
             // set MM end date as current calendar date
             cal.add(Calendar.DATE, period);
-            String MMEnd = format.format(cal.getTime()).substring(0, period - 1);
+            String MMEnd = format.format(cal.getTime()).substring(0, 6);
             System.out.print("Checking status of sign-up from " + phoneEnd + " to " + MMEnd + "\n");
 
             // reset calendar to previous period again

@@ -417,292 +417,292 @@ public class PoissonModel1{
 //        model.saveMetric(saveFile_metric);
     }
 
-
-    /**
-     *
-     * @param a0 Gamma parameter for slab of \alpha
-     * @param b0 Gamma parameter for spike of \alpha
-     * @param c Beta parameter for \gamma_p
-     * @param d Beta parameter for \gamma_p
-     * @param epsilon Controls spike of \alpha (small value)
-     * @param a1 Gamma parameter for \theta
-     * @param b1 Gamma parameter for \theta
-     * @param T Length of chain
-     * @param thin thinning of chain
-     * @param burn burning of chain
-     * @param seed seed of chain
-     * @param motif N by M matrix of counts
-     * @param motifNeighbour K by N by M array of counts (K: number of node type)
-     * @param dict P by M matrix of dict/design matrix
-     * @param delta  K by K by N by M array of binary values
-     * @param y length N vector of outcome
-     * @param verbose boolean whether to print more information at each iteration
-     * @return
-     */
-    public void fitUnsup_Poisson_additive(
-            double a0, double b0,
-            double c, double d, double epsilon,
-            double a1, double b1,
-            int T, int thin, int burn, int seed,
-            int[][] motif, int[][][] motifNeighbour,
-            double[][] dict,
-            double[][][][] delta,
-            int[] y,
-            boolean verbose
-            ){
-
-
-        int N = motif.length;
-        int M = motif[0].length;
-        int P = dict.length;
-        int K = motifNeighbour.length;
-
-        DoubleRandomEngine rngEngine=new DoubleMersenneTwister(seed);
-        Random rand = new Random();
-        //Normal rngN=new Normal(0.0, 1.0, rngEngine);
-        Gamma rngG=new Gamma(1.0, 1.0, rngEngine);
-        Binomial rngB = new Binomial(1, 0.5, rngEngine);
-        Beta rngBe = new Beta(1, 1, rngEngine);
-        Multinomial rngM = new Multinomial(P);
-
-
-        // sparse representation of xsub
-        /* in the form of [person][sub_index](Map<slot_index, count>)
-         * i.e., xsub[i][j] = Map<{1, 1}, {2, 10}, ...>
-         *     means motif[i][j] gets decomposed into 1 in slot 1, 10 in slot 2, ...
-         *     total number of slot: P + M
-         */
-        MapWrapper[][] xsub = new MapWrapper[N][M];
-
-        // parameters
-        double[][] alpha_now = new double[N][P];
-        double[][] theta_now = new double[M][M];
-        int[][] z_now = new int[N][P];
-        double[] gamma_now = new double[P];
-
-
-
-        this.mse = new double[T];
-        this.mae = new double[T];
-        this.mmae = new double[T];
-        this.alpha_out = new double[T - burn][N][P];
-        this.theta_out = new double[T - burn][M][M];
-        int n_report = T / 100;
-        if(T < 100) n_report = 1;
-
-		/*
-		 * Initialization
-		 */
-        for(int i = 0; i < N; i++){
-            for(int p = 0; p < P; p++){
-                alpha_now[i][p] = rngG.nextDouble(a0, b0);
-            }
-        }
-        for(int p = 0; p < P; p++){
-            gamma_now[p] = rand.nextDouble();
-        }
-        for(int j = 0; j < M; j++){
-            for(int jj = 0; jj < M; jj++){
-                theta_now[j][jj] = rngG.nextDouble(a1, b1);
-            }
-        }
-
-
-		/*
-		 * Start iteration
-		 */
-        long start = System.currentTimeMillis();
-
-        /** try memory intensive approach to reduce computational cost **/
-        double[][][] MotifStar = new double[N][M][M];
-        double[][] sum_i_MotifStar = new double[M][M];
-        for(int i = 0; i < N; i++){
-            for(int j = 0; j < M; j++){
-                for(int jj = 0; jj < M; jj ++){
-                    for(int k = 0; k < K ; k++){
-                        MotifStar[i][j][jj] += motifNeighbour[k][i][jj] * delta[y[i]][k][j][jj];
-                        sum_i_MotifStar[j][jj] += MotifStar[i][j][jj];
-                    }
-                }
-            }
-        }
-
-        int[] motifSum = new int[N];
-        int zerocount = 0;
-        for(int i = 0; i < N; i++){
-            for(int j = 0; j < M; j++){
-                motifSum[i] += motif[i][j];
-            }
-            if(motifSum[i] == 0){zerocount ++;}
-        }
-
-
-        for(int t = 0; t<T; t++){
-			/*
-			 * sample xsub:
-			 * [person][sub_index](Map<slot_index, count>)
-             * i.e., xsub[i][j] = Map<{1, 1}, {2, 10}, ...>
-             *     means motif[i][j] gets decomposed into 1 in slot 1, 10 in slot 2, ...
-             *     total number of slot: P + M
-			 */
-            double alpha_verbose1 = 0;
-            double alpha_verbose2 = 0;
-            int[][] sum_i_xsub = new int[M][M];
-
-            for(int i = 0; i < N; i++){
-                for(int j = 0; j < M; j++){
-                    xsub[i][j] = new MapWrapper();
-                    double[] prob = new double[P + M];
-                    double prob_sum = 0;
-                    for(int p = 0; p < P; p++){
-                        prob[p] = alpha_now[i][p] * dict[p][j];
-                        prob_sum += prob[p];
-                    }
-                    for(int jj = 0; jj < M; jj++){
-//                        for(int k = 0; k < K; k++){
-//                            prob[P + jj] +=  motifNeighbour[k][i][jj] * delta[y[i]][k][j][jj] * theta_now[j][jj];
+//
+//    /**
+//     *
+//     * @param a0 Gamma parameter for slab of \alpha
+//     * @param b0 Gamma parameter for spike of \alpha
+//     * @param c Beta parameter for \gamma_p
+//     * @param d Beta parameter for \gamma_p
+//     * @param epsilon Controls spike of \alpha (small value)
+//     * @param a1 Gamma parameter for \theta
+//     * @param b1 Gamma parameter for \theta
+//     * @param T Length of chain
+//     * @param thin thinning of chain
+//     * @param burn burning of chain
+//     * @param seed seed of chain
+//     * @param motif N by M matrix of counts
+//     * @param motifNeighbour K by N by M array of counts (K: number of node type)
+//     * @param dict P by M matrix of dict/design matrix
+//     * @param delta  K by K by N by M array of binary values
+//     * @param y length N vector of outcome
+//     * @param verbose boolean whether to print more information at each iteration
+//     * @return
+//     */
+//    public void fitUnsup_Poisson_additive(
+//            double a0, double b0,
+//            double c, double d, double epsilon,
+//            double a1, double b1,
+//            int T, int thin, int burn, int seed,
+//            int[][] motif, int[][][] motifNeighbour,
+//            double[][] dict,
+//            double[][][][] delta,
+//            int[] y,
+//            boolean verbose
+//            ){
+//
+//
+//        int N = motif.length;
+//        int M = motif[0].length;
+//        int P = dict.length;
+//        int K = motifNeighbour.length;
+//
+//        DoubleRandomEngine rngEngine=new DoubleMersenneTwister(seed);
+//        Random rand = new Random();
+//        //Normal rngN=new Normal(0.0, 1.0, rngEngine);
+//        Gamma rngG=new Gamma(1.0, 1.0, rngEngine);
+//        Binomial rngB = new Binomial(1, 0.5, rngEngine);
+//        Beta rngBe = new Beta(1, 1, rngEngine);
+//        Multinomial rngM = new Multinomial(P);
+//
+//
+//        // sparse representation of xsub
+//        /* in the form of [person][sub_index](Map<slot_index, count>)
+//         * i.e., xsub[i][j] = Map<{1, 1}, {2, 10}, ...>
+//         *     means motif[i][j] gets decomposed into 1 in slot 1, 10 in slot 2, ...
+//         *     total number of slot: P + M
+//         */
+//        MapWrapper[][] xsub = new MapWrapper[N][M];
+//
+//        // parameters
+//        double[][] alpha_now = new double[N][P];
+//        double[][] theta_now = new double[M][M];
+//        int[][] z_now = new int[N][P];
+//        double[] gamma_now = new double[P];
+//
+//
+//
+//        this.mse = new double[T];
+//        this.mae = new double[T];
+//        this.mmae = new double[T];
+//        this.alpha_out = new double[T - burn][N][P];
+//        this.theta_out = new double[T - burn][M][M];
+//        int n_report = T / 100;
+//        if(T < 100) n_report = 1;
+//
+//		/*
+//		 * Initialization
+//		 */
+//        for(int i = 0; i < N; i++){
+//            for(int p = 0; p < P; p++){
+//                alpha_now[i][p] = rngG.nextDouble(a0, b0);
+//            }
+//        }
+//        for(int p = 0; p < P; p++){
+//            gamma_now[p] = rand.nextDouble();
+//        }
+//        for(int j = 0; j < M; j++){
+//            for(int jj = 0; jj < M; jj++){
+//                theta_now[j][jj] = rngG.nextDouble(a1, b1);
+//            }
+//        }
+//
+//
+//		/*
+//		 * Start iteration
+//		 */
+//        long start = System.currentTimeMillis();
+//
+//        /** try memory intensive approach to reduce computational cost **/
+//        double[][][] MotifStar = new double[N][M][M];
+//        double[][] sum_i_MotifStar = new double[M][M];
+//        for(int i = 0; i < N; i++){
+//            for(int j = 0; j < M; j++){
+//                for(int jj = 0; jj < M; jj ++){
+//                    for(int k = 0; k < K ; k++){
+//                        MotifStar[i][j][jj] += motifNeighbour[k][i][jj] * delta[y[i]][k][j][jj];
+//                        sum_i_MotifStar[j][jj] += MotifStar[i][j][jj];
+//                    }
+//                }
+//            }
+//        }
+//
+//        int[] motifSum = new int[N];
+//        int zerocount = 0;
+//        for(int i = 0; i < N; i++){
+//            for(int j = 0; j < M; j++){
+//                motifSum[i] += motif[i][j];
+//            }
+//            if(motifSum[i] == 0){zerocount ++;}
+//        }
+//
+//
+//        for(int t = 0; t<T; t++){
+//			/*
+//			 * sample xsub:
+//			 * [person][sub_index](Map<slot_index, count>)
+//             * i.e., xsub[i][j] = Map<{1, 1}, {2, 10}, ...>
+//             *     means motif[i][j] gets decomposed into 1 in slot 1, 10 in slot 2, ...
+//             *     total number of slot: P + M
+//			 */
+//            double alpha_verbose1 = 0;
+//            double alpha_verbose2 = 0;
+//            int[][] sum_i_xsub = new int[M][M];
+//
+//            for(int i = 0; i < N; i++){
+//                for(int j = 0; j < M; j++){
+//                    xsub[i][j] = new MapWrapper();
+//                    double[] prob = new double[P + M];
+//                    double prob_sum = 0;
+//                    for(int p = 0; p < P; p++){
+//                        prob[p] = alpha_now[i][p] * dict[p][j];
+//                        prob_sum += prob[p];
+//                    }
+//                    for(int jj = 0; jj < M; jj++){
+////                        for(int k = 0; k < K; k++){
+////                            prob[P + jj] +=  motifNeighbour[k][i][jj] * delta[y[i]][k][j][jj] * theta_now[j][jj];
+////                        }
+//                        prob[P + jj] += theta_now[j][jj] * MotifStar[i][j][jj];
+//                        prob_sum += prob[P + jj];
+//                    }
+//
+//                    /** calculate SAE and SSE **/
+//                    this.mse[t] += (motif[i][j] - prob_sum) * (motif[i][j] - prob_sum) / (N * M + 0.0);
+//                    this.mae[t] += Math.abs(motif[i][j] - prob_sum) / (N * M + 0.0);
+//                    if(motifSum[i] > 0) {
+//                        this.mmae[t] += Math.abs(motif[i][j] - prob_sum) / (motifSum[i] + 0.0)
+//                                / ((N - zerocount) + 0.0);
+//                    }
+//
+//                    if(prob_sum != 0){
+//                        xsub[i][j].addAll(rngM.SampleAsList(prob, prob_sum, motif[i][j]));
+//                        sum_i_xsub[j] = xsub[i][j].getVector(P, P + M - 1);
+//                        for(int key : xsub[i][j].x.keySet()){
+//                            if(key < P){
+//                                alpha_verbose1 += xsub[i][j].get(key);
+//                            }else{
+//                                alpha_verbose2 += xsub[i][j].get(key);
+//                            }
 //                        }
-                        prob[P + jj] += theta_now[j][jj] * MotifStar[i][j][jj];
-                        prob_sum += prob[P + jj];
-                    }
-
-                    /** calculate SAE and SSE **/
-                    this.mse[t] += (motif[i][j] - prob_sum) * (motif[i][j] - prob_sum) / (N * M + 0.0);
-                    this.mae[t] += Math.abs(motif[i][j] - prob_sum) / (N * M + 0.0);
-                    if(motifSum[i] > 0) {
-                        this.mmae[t] += Math.abs(motif[i][j] - prob_sum) / (motifSum[i] + 0.0)
-                                / ((N - zerocount) + 0.0);
-                    }
-
-                    if(prob_sum != 0){
-                        xsub[i][j].addAll(rngM.SampleAsList(prob, prob_sum, motif[i][j]));
-                        sum_i_xsub[j] = xsub[i][j].getVector(P, P + M - 1);
-                        for(int key : xsub[i][j].x.keySet()){
-                            if(key < P){
-                                alpha_verbose1 += xsub[i][j].get(key);
-                            }else{
-                                alpha_verbose2 += xsub[i][j].get(key);
-                            }
-                        }
-                    }
-                }
-            }
-            if(verbose) {
-                System.out.print("finish xsub: ");
-                System.out.printf("%.2fmin MeanSum_dict_comp %.6f MeanSum_soc_comp %.6f\n",
-                                (double) (System.currentTimeMillis() - start) / 1000 / 60,
-                                (alpha_verbose1 + 0.0) / (N * M  + 0.0),
-                                (alpha_verbose2 + 0.0) / (N * M  + 0.0));
-            }
-
-			/*
-			 * sample z
-			 */
-            double zsum_verbose = 0;
-            for(int i=0; i < N; i++){
-                for(int p=0; p<P; p++){
-                    double firstTerm = gamma_now[p] * Math.pow(b0, a0)/MathUtil.gamma(a0)
-                            * Math.pow(alpha_now[i][p], a0-1)*Math.exp(-1 * b0 * alpha_now[i][p]);
-                    double prob = firstTerm / (firstTerm + (1 - gamma_now[p]) * Math.exp(-1 / epsilon *
-                            alpha_now[i][p]) / epsilon);
-                    if(prob * (1 - prob) == 0){
-                        z_now[i][p] = (int) prob;
-                    }else{
-                        z_now[i][p] = rngB.nextInt(1, prob);
-                    }
-                    zsum_verbose += z_now[i][p];
-                }
-            }
-            if(verbose) {
-                System.out.print("finish Z: ");
-                System.out.printf("%.2fmin, Sparsity %.6f\n", (double) (System.currentTimeMillis() - start) / 1000 / 60,
-                        (zsum_verbose + 0.0) / (N * P + 0.0));
-            }
-
-			/*
-			 * sample gamma
-			 */
-            int[] zsum = VectorUtil.apply_sum(2, z_now);
-            double gamma_verbose = 0;
-            for(int p = 0; p < P; p++){
-                gamma_now[p] = rngBe.nextDouble(c + zsum[p],  d + N - zsum[p]);
-                gamma_verbose += gamma_now[p];
-            }
-
-
-            if(verbose) {
-                System.out.print("finish gamma: ");
-                System.out.printf("%.2fmin, Mean %.2f\n", (double) (System.currentTimeMillis() - start) / 1000 / 60,
-                        (gamma_verbose + 0.0) / (P + 0.0));
-            }
-
-            /*
-			 * sample alpha
-			 */
-            double alpha_verbose = 0;
-            for(int i = 0; i < N; i++){
-                for(int p = 0; p < P; p++){
-                    // use only index 0 to P-1, as they are the slots for dict decomposition
-                    double shape = VectorUtil.pick13_sum(i, p, xsub, 0, P - 1) + (a0-1) * z_now[i][p] + 1;
-                    double rate = VectorUtil.vectorSum(dict[p]) + b0 * z_now[i][p] + epsilon * (1-z_now[i][p]);
-                    alpha_now[i][p] = rngG.nextDouble(shape,rate);
-                    alpha_verbose += alpha_now[i][p];
-                }
-            }
-            if(verbose) {
-                System.out.print("finish alpha: ");
-                System.out.printf("%.2fmin, Mean %.2f\n", (double) (System.currentTimeMillis() - start) / 1000 / 60,
-                        (alpha_verbose + 0.0) / (P * N + 0.0));
-            }
-
-            /*
-             * sample theta
-             */
-            double theta_verbose = 0;
-            for(int j = 0; j < M; j++){
-                for(int jj = 0; jj < M; jj++){
-                    double sum_i_x = (double) sum_i_xsub[j][jj];
-                    double sum_i_x_tilde = sum_i_MotifStar[j][jj];
-                    theta_now[j][jj] = rngG.nextDouble(sum_i_x + a1, sum_i_x_tilde + b1);
-                    theta_verbose += theta_now[j][jj];
-                }
-            }
-            if(verbose) {
-                System.out.print("finish theta: ");
-                System.out.printf("%.2fmin, Mean %.6f\n", (double) (System.currentTimeMillis() - start) / 1000 / 60,
-                        (theta_verbose + 0.0) / (P * N + 0.0));
-            }
-
-            System.out.printf("-- Itr %d MSE: %.6f MAE: %.6f MMAE %.6f\n", t, this.mse[t], this.mae[t], this.mmae[t]);
-
-            if(t % n_report == 0){
-                double spar = VectorUtil.vectorSum(zsum) / (N * P + 0.0);
-                long now   = System.currentTimeMillis();
-                System.out.printf("\n-- %d --", t);
-                System.out.printf("Time -- %.2fmin --", (double) (now - start)/1000/60);
-                System.out.printf("Sparse -- %.6f\n", spar);
-            }
-            if(t >= burn){
-                //if(t % thin == 0){
-                if(t % 1 == 0){
-                    System.out.printf("Itr %d sampled\n", t);
-                    /** save alpha **/
-                    for(int i = 0; i < N; i++){
-                        for(int j = 0; j < P; j++){
-                            this.alpha_out[t - burn][i][j] = alpha_now[i][j];
-                        }
-                    }
-                    /** save delta **/
-                    for(int i = 0; i < M; i++){
-                        for(int j = 0; j < M; j++){
-                            this.theta_out[t - burn][i][j] = theta_now[i][j];
-                        }
-                    }
-
-                }
-            }
-        }
-    }
+//                    }
+//                }
+//            }
+//            if(verbose) {
+//                System.out.print("finish xsub: ");
+//                System.out.printf("%.2fmin MeanSum_dict_comp %.6f MeanSum_soc_comp %.6f\n",
+//                                (double) (System.currentTimeMillis() - start) / 1000 / 60,
+//                                (alpha_verbose1 + 0.0) / (N * M  + 0.0),
+//                                (alpha_verbose2 + 0.0) / (N * M  + 0.0));
+//            }
+//
+//			/*
+//			 * sample z
+//			 */
+//            double zsum_verbose = 0;
+//            for(int i=0; i < N; i++){
+//                for(int p=0; p<P; p++){
+//                    double firstTerm = gamma_now[p] * Math.pow(b0, a0)/MathUtil.gamma(a0)
+//                            * Math.pow(alpha_now[i][p], a0-1)*Math.exp(-1 * b0 * alpha_now[i][p]);
+//                    double prob = firstTerm / (firstTerm + (1 - gamma_now[p]) * Math.exp(-1 / epsilon *
+//                            alpha_now[i][p]) / epsilon);
+//                    if(prob * (1 - prob) == 0){
+//                        z_now[i][p] = (int) prob;
+//                    }else{
+//                        z_now[i][p] = rngB.nextInt(1, prob);
+//                    }
+//                    zsum_verbose += z_now[i][p];
+//                }
+//            }
+//            if(verbose) {
+//                System.out.print("finish Z: ");
+//                System.out.printf("%.2fmin, Sparsity %.6f\n", (double) (System.currentTimeMillis() - start) / 1000 / 60,
+//                        (zsum_verbose + 0.0) / (N * P + 0.0));
+//            }
+//
+//			/*
+//			 * sample gamma
+//			 */
+//            int[] zsum = VectorUtil.apply_sum(2, z_now);
+//            double gamma_verbose = 0;
+//            for(int p = 0; p < P; p++){
+//                gamma_now[p] = rngBe.nextDouble(c + zsum[p],  d + N - zsum[p]);
+//                gamma_verbose += gamma_now[p];
+//            }
+//
+//
+//            if(verbose) {
+//                System.out.print("finish gamma: ");
+//                System.out.printf("%.2fmin, Mean %.2f\n", (double) (System.currentTimeMillis() - start) / 1000 / 60,
+//                        (gamma_verbose + 0.0) / (P + 0.0));
+//            }
+//
+//            /*
+//			 * sample alpha
+//			 */
+//            double alpha_verbose = 0;
+//            for(int i = 0; i < N; i++){
+//                for(int p = 0; p < P; p++){
+//                    // use only index 0 to P-1, as they are the slots for dict decomposition
+//                    double shape = VectorUtil.pick13_sum(i, p, xsub, 0, P - 1) + (a0-1) * z_now[i][p] + 1;
+//                    double rate = VectorUtil.vectorSum(dict[p]) + b0 * z_now[i][p] + epsilon * (1-z_now[i][p]);
+//                    alpha_now[i][p] = rngG.nextDouble(shape,rate);
+//                    alpha_verbose += alpha_now[i][p];
+//                }
+//            }
+//            if(verbose) {
+//                System.out.print("finish alpha: ");
+//                System.out.printf("%.2fmin, Mean %.2f\n", (double) (System.currentTimeMillis() - start) / 1000 / 60,
+//                        (alpha_verbose + 0.0) / (P * N + 0.0));
+//            }
+//
+//            /*
+//             * sample theta
+//             */
+//            double theta_verbose = 0;
+//            for(int j = 0; j < M; j++){
+//                for(int jj = 0; jj < M; jj++){
+//                    double sum_i_x = (double) sum_i_xsub[j][jj];
+//                    double sum_i_x_tilde = sum_i_MotifStar[j][jj];
+//                    theta_now[j][jj] = rngG.nextDouble(sum_i_x + a1, sum_i_x_tilde + b1);
+//                    theta_verbose += theta_now[j][jj];
+//                }
+//            }
+//            if(verbose) {
+//                System.out.print("finish theta: ");
+//                System.out.printf("%.2fmin, Mean %.6f\n", (double) (System.currentTimeMillis() - start) / 1000 / 60,
+//                        (theta_verbose + 0.0) / (P * N + 0.0));
+//            }
+//
+//            System.out.printf("-- Itr %d MSE: %.6f MAE: %.6f MMAE %.6f\n", t, this.mse[t], this.mae[t], this.mmae[t]);
+//
+//            if(t % n_report == 0){
+//                double spar = VectorUtil.vectorSum(zsum) / (N * P + 0.0);
+//                long now   = System.currentTimeMillis();
+//                System.out.printf("\n-- %d --", t);
+//                System.out.printf("Time -- %.2fmin --", (double) (now - start)/1000/60);
+//                System.out.printf("Sparse -- %.6f\n", spar);
+//            }
+//            if(t >= burn){
+//                //if(t % thin == 0){
+//                if(t % 1 == 0){
+//                    System.out.printf("Itr %d sampled\n", t);
+//                    /** save alpha **/
+//                    for(int i = 0; i < N; i++){
+//                        for(int j = 0; j < P; j++){
+//                            this.alpha_out[t - burn][i][j] = alpha_now[i][j];
+//                        }
+//                    }
+//                    /** save delta **/
+//                    for(int i = 0; i < M; i++){
+//                        for(int j = 0; j < M; j++){
+//                            this.theta_out[t - burn][i][j] = theta_now[i][j];
+//                        }
+//                    }
+//
+//                }
+//            }
+//        }
+//    }
 
     /**
      *
@@ -1063,6 +1063,7 @@ public class PoissonModel1{
             prob[p] = u_now_i[p] * v_now_j[p];
             prob_sum += prob[p];
         }
+        double sum_dict = prob_sum;
         for(int jj = 0; jj < M; jj++){
             prob[P + jj] += theta_now_j[jj] * X_i_j[jj];
             prob_sum += prob[P + jj];
@@ -1077,6 +1078,8 @@ public class PoissonModel1{
                 prob[l] *= sum / prob_sum;
             }
         }
+        double sum_soc = prob_sum - sum_dict;
+//        System.out.printf("Total Motif: %.2f, Dict: %.2f, Soc: %.2f\n", sum, sum_dict, sum_soc);
         return(prob);
     }
 

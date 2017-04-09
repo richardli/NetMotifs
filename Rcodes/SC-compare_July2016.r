@@ -3,36 +3,33 @@
 ##
 ##
 remove(list = ls())
-library(glmnet)
+library(gamlr)
 library(ROCR)
 ##---------------------------------------##
 ## cd /data/rwanda_anon/richardli/MotifwithNeighbour
-dir <- "Jun2016/"
+dir <- "July2016/"
 month <- "0705"
-week <- 0
-sample.size <- 2e4
+week <- 1
+sample.size <- 1e4
 out <- NULL
 dict <- 1 # 0 is all, 1 is first 12 only
 
 lasso <- function(X, Y, X1, Y1){
-	fit0.cv <- cv.glmnet(x = X, 
+	fit0.cv <- cv.gamlr(x = X, 
 					     y = Y, 
-					 family = "binomial",  
-					 type.measure = "auc")
-	fit0 <- glmnet(x = X, y = Y, family = "binomial", 
-					lambda = fit0.cv$lambda.min)
-	beta <- fit0$beta
-	pred <- predict(fit0, X1)
-	perf <- prediction(pred, Y1)
+					 family = "binomial")
+	beta <- coef(fit0.cv, select = "min")
+	pred <- predict(fit0.cv, X1, select = "min")
+	perf <- prediction(as.matrix(pred), Y1)
 	auc <- performance(perf, "auc")@y.values[[1]]
 
-	return(list(fit = fit0, 
+	return(list(fit = fit0.cv, 
 		beta = as.numeric(beta),
 		perf = perf, 
 		auc = auc))
 }
 
-for(week in 0:3){
+for(week in 1:3){
 
 	current <- read.table(paste0(month, "week", week, ".txt"), nrows = sample.size * 10)
 	current <- current[current[, 2] != -1, ]
@@ -77,8 +74,8 @@ for(week in 0:3){
 	##---------------------------------------##
 	##---------------------------------------##
 	# dir <- "../data/Jun2016/"
-	name <- paste0(month, "week", week, "_dict", dict, "_g2_j_2e4")
-	nameNG <- paste0(month, "week", week, "_dict", dict, "_ng_j_2e4")
+	name <- paste0(month, "week", week, "_dict", dict, "_g2_A")
+	nameNG <- paste0(month, "week", week, "_dict", dict, "_ng_A")
 
 	beta <- read.table(paste0(dir, name, "_beta.txt"), sep = ",")
 	alpha0 <- read.table(paste0(dir, name, "_alpha.txt"), sep = ",")
@@ -89,18 +86,24 @@ for(week in 0:3){
 	y <- y0[(sample.size + 1) : (sample.size * 2),2]
 	y0 <- y0[1:sample.size,2]
 
-	theta <- read.table(paste0(dir, name, "_theta.txt"), sep = ",")
+	# theta <- read.table(paste0(dir, name, "_theta.txt"), sep = ",")
 
-	beta <- as.matrix(beta)
+	colnames(beta) <- c("intercept", rownames(D))
+	summary(beta)
+	# beta <- matrix(apply(beta, 2, median), nrow = 1)
 	alpha0 <- as.matrix(alpha0)
 	alpha <- as.matrix(alpha)
-	theta <- as.matrix(theta)
+	# theta <- as.matrix(theta)
 
 	D <- default_dict() 
 	if(dict == 1){
 		D <- D[1:12, ]
 	}
 	colnames(alpha) <- rownames(D)
+	colnames(alpha0) <- rownames(D)
+	fit4 <- glm(y0~as.matrix(alpha0), family = "binomial")
+	beta <- matrix(fit4$coefficient, nrow=1)
+	# names(beta.check) <- colnames(beta)
 	colnames(beta) <- c("intercept", rownames(D))
 
 	# library(lattice)
@@ -109,19 +112,14 @@ for(week in 0:3){
 	# levelplot(theta, col.regions = gray(100:0/100))
 
 
-	uv <- cbind(1, alpha) %*% t(beta)
+	uv <- cbind(1, alpha) %*% apply(beta, 2, median)
 	pred <- prediction(uv, y)
 	perf <- performance(pred,"tpr","fpr")
 	aucG <- performance(pred, "auc")@y.values[[1]]
 	aucG
 	# aucG <- NA
 	# beta <- NA
-	colnames(alpha0) <- rownames(D)
-	fit4 <- glm(y0~alpha0, family = "binomial")
-	beta.check <- fit4$coefficient
-	names(beta.check) <- colnames(beta)
-	round(data.frame(check = as.numeric(beta.check), 
-			   java = as.numeric(beta)), 3)
+	
 	###------------------------------------------###
 	# aucNG <- NA
 	alpha0NG <- read.table(paste0(dir, nameNG, "_alpha.txt"), sep = ",")
@@ -131,12 +129,14 @@ for(week in 0:3){
 	y0NG <- read.table(paste0(dir, nameNG, "_y.txt"), sep = ",")
 	yNG <- y0NG[(sample.size + 1) : (sample.size * 2),2]
 	y0NG <- y0NG[1:sample.size,2]
-	betaNG <- read.table(paste0(dir, nameNG, "_beta.txt"), sep = ",")
+	# betaNG <- read.table(paste0(dir, nameNG, "_beta.txt"), sep = ",")
+	fit3 <- glm(y0NG~as.matrix(alpha0NG), family = "binomial")
+	betaNG <- matrix(fit3$coefficient, nrow = 1)
+	colnames(betaNG) <- c("intercept", rownames(D))
 
 	alpha0NG <- as.matrix(alpha0NG)
 	alphaNG <- as.matrix(alphaNG)
 	betaNG <- as.matrix(betaNG)
-	colnames(alpha0NG) <- colnames(alpha)
 
 	uvNG <- cbind(1, alphaNG) %*% t(betaNG)
 	predNG <- prediction(uvNG, yNG)
@@ -144,12 +144,7 @@ for(week in 0:3){
 	aucNG <- performance(predNG, "auc")@y.values[[1]]
 	aucNG
 
-	fit3 <- glm(y0NG~alpha0NG, family = "binomial")
-	betaNG.check <- fit3$coefficient
-	names(betaNG.check) <- colnames(betaNG)
-	round(data.frame(check = as.numeric(betaNG.check), 
-		java = as.numeric(betaNG)), 3)
-
+	
 	#--------------------------------------------------#
 	# load(paste0("../data/Jun2016/", month, "week", week, "raw.rda"))
 	
